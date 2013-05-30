@@ -1,0 +1,12 @@
+<test>
+    <books>
+        <book language="de">
+            <author>Jostein Gaarder</author>
+            <title>Sofies Welt</title>
+        </book>
+        <book language="en">
+            <author>William Goldman</author>
+            <title>The Princess Bride</title>
+        </book>
+    </books>
+</test>
