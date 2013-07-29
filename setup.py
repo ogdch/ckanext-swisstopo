@@ -29,6 +29,7 @@ setup(
     swisstopo=ckanext.swisstopo.plugins:SwisstopoHarvest
     swisstopo_harvester=ckanext.swisstopo.harvester:SwisstopoHarvester
     [paste.paster_command]
+    swisstopo=ckanext.swisstopo.commands.swisstopo:SwisstopoCommand
     swisstopo_harvest=ckanext.swisstopo.commands.harvester:Harvester
 	""",
 )
