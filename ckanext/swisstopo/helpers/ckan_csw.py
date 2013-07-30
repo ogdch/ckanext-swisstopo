@@ -1,6 +1,6 @@
 import traceback
 from owslib.csw import CatalogueServiceWeb
-from ckanext.swisstopo.etree.etree import etree
+from lxml import etree
 
 namespaces = {
     'atom': 'http://www.w3.org/2005/Atom',
