@@ -2,8 +2,8 @@ import logging
 import ckan.lib.cli
 import sys
 
-from ckanext.swisstopo.s3 import s3
-from ckanext.swisstopo.ckan_csw import ckan_csw
+from ckanext.swisstopo.helpers import s3
+from ckanext.swisstopo.helpers import ckan_csw
 
 
 class SwisstopoCommand(ckan.lib.cli.CkanCommand):
