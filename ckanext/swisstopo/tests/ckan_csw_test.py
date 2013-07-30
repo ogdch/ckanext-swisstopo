@@ -1,7 +1,7 @@
 from mock import Mock
-import unittest
-from ckanext.swisstopo.ckan_csw import ckan_csw
-from ckanext.swisstopo.etree.etree import etree
+import unittest, os, sys
+from ckanext.swisstopo.helpers import ckan_csw
+from lxml import etree
 
 class CkanMetadataTest(unittest.TestCase):
     def test_init(self):
@@ -17,7 +17,7 @@ class CkanMetadataTest(unittest.TestCase):
 
 class SwisstopoCkanMetadataTest(unittest.TestCase):
     def setUp(self):
-        self.test_xml = etree.parse('swissboundaries_csw.test.xml')
+        self.test_xml = etree.parse(os.path.dirname(__file__) + '/swissboundaries_csw.test.xml')
         self.swisstopo = ckan_csw.SwisstopoCkanMetadata()
         self.swisstopo.get_xml = Mock(return_value=self.test_xml)
 
@@ -46,7 +46,7 @@ class StringAttributeTest(unittest.TestCase):
 
 class XmlAttributeTest(unittest.TestCase):
     def setUp(self):
-        xml_input = etree.parse('test.xml')
+        xml_input = etree.parse(os.path.dirname(__file__) + '/test.xml')
         self.test_xml = xml_input.getroot()
 
     def remove_all_whitespace(self, str):
@@ -54,7 +54,7 @@ class XmlAttributeTest(unittest.TestCase):
 
     def test_xml_attribute_get_value_init(self):
         attr = ckan_csw.XmlAttribute('', xml=self.test_xml)
-        xml_string = open('test.xml', 'r').read()
+        xml_string = open(os.path.dirname(__file__) + '/test.xml', 'r').read()
 
         xml_string = self.remove_all_whitespace(xml_string)
         attr_value = self.remove_all_whitespace(attr.get_value())
@@ -63,7 +63,7 @@ class XmlAttributeTest(unittest.TestCase):
 
     def test_xml_attribute_get_value_call(self):
         attr = ckan_csw.XmlAttribute('')
-        xml_string = open('test.xml', 'r').read()
+        xml_string = open(os.path.dirname(__file__) + '/test.xml', 'r').read()
 
         xml_string = self.remove_all_whitespace(xml_string)
         attr_value = self.remove_all_whitespace(attr.get_value(xml=self.test_xml))
