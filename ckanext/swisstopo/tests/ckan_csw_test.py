@@ -1,5 +1,5 @@
-from mock import Mock
 import unittest, os, sys
+from mock import Mock
 from ckanext.swisstopo.helpers import ckan_csw
 from lxml import etree
 
