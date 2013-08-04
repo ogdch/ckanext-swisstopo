@@ -1,4 +1,5 @@
-import ckanclient
+#n -*- coding: utf-8 -*-
+
 import random
 import os
 import shutil
@@ -6,7 +7,6 @@ import tempfile
 import zipfile
 from pprint import pprint
 from collections import defaultdict
-import ckan_csw
 
 from ckan.lib.base import c
 from ckan import model
@@ -14,24 +14,55 @@ from ckan.model import Session, Package
 from ckan.logic import ValidationError, NotFound, get_action, action
 from ckan.lib.helpers import json
 
-from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, \
-                                    HarvestObjectError
+from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, HarvestObjectError
 from ckanext.harvest.harvesters import HarvesterBase
+
+from ckanext.swisstopo.helpers import ckan_csw
+from ckanext.swisstopo.helpers import s3
 
 import logging
 log = logging.getLogger(__name__)
 
-class SwisstopoHarvester(HarvesterCase):
+class SwisstopoHarvester(HarvesterBase):
     '''
     The harvester for swisstopo
     '''
 
-    API_KEY = p.toolkit.asbool(config.get('ckanext.swisstopo.api_key', ''))
-    BASE_LOCATION = p.toolkit.asbool(config.get('ckanext.swisstopo.base_location', ''))
+    HARVEST_USER = u'harvest'
 
-    ckan = ckanclient.CkanClient(api_key=API_KEY, base_location=BASE_LOCATION)
+    DATASETS = {
+        'ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill': {
+            'csw_query': 'swissboundaries3D Gemeindegrenzen',
+        },
+        'ch.swisstopo.swissboundaries3d-bezirk-flaeche.fill': {
+            'csw_query': 'swissboundaries3D Bezirksgrenzen',
+        },
+        'ch.swisstopo.swissboundaries3d-kanton-flaeche.fill': {
+            'csw_query': 'swissboundaries3D Kantonsgrenzen',
+        },
+        'ch.swisstopo.swissboundaries3d-land-flaeche.fill': {
+            'csw_query': 'swissboundaries3D Landesgrenzen',
+        },
+        'ch.swisstopo.pixelkarte-farbe-pk1000.noscale': {
+            'csw_query': 'Landeskarte 1:1 Mio.',
+        },
+    }
 
-    DATASET_NAMES = ['swissboundaries3D']
+    FILES_BASE_URL = 'http://opendata-ch.s3.amazonaws.com'
+
+    ORGANIZATION = {
+        'de': u'Bundesamt für Landestopografie swisstopo',
+        'fr': u'Office fédéral de topographie swisstopo',
+        'it': u'Ufficio federale di topografia swisstopo',
+        'en': u'Federal Office of Topography swisstopo',
+    }
+    GROUPS = {
+        'de': [u'Raum und Umwelt'],
+        'fr': [u'Espace et environnement'],
+        'it': [u'Territorio e ambiente'],
+        'en': [u'Territory and environment']
+    }
+ 
 
     def info(self):
         return {
@@ -44,10 +75,18 @@ class SwisstopoHarvester(HarvesterCase):
     def gather_stage(self, harvest_job):
         log.debug('In SwisstopoHarvester gather_stage')
 
-        csw = ckan_csw.SwisstopoCkanMetadata();
         ids = []
-        for dataset_name in self.DATASET_NAMES:
-            metadata = csw.get_ckan_metadata(dataset_name)
+        for dataset_name, dataset in self.DATASETS.iteritems():
+            csw = ckan_csw.SwisstopoCkanMetadata();
+            metadata = csw.get_ckan_metadata(dataset['csw_query'])
+            log.debug(metadata)
+            
+            metadata['translations'] = self._generate_term_translations()
+            log.debug("Translations: %s" % metadata['translations'])
+
+            metadata['resources'] = self._generate_resources_dict_array(dataset_name)
+            log.debug(metadata['resources'])
+
             obj = HarvestObject(
                 guid = metadata['id'],
                 job = harvest_job,
@@ -61,79 +100,147 @@ class SwisstopoHarvester(HarvesterCase):
 
 
     def fetch_stage(self, harvest_object):
-        pass
+        log.debug('In SwisstopoHarvester fetch_stage')
 
-    def import_stage(self, harvest_obeject):
-        pass
-
-
-
-    def create_dataset(name, tags, description, metadata):
-        dataset_name = name + '_' + str(random.randint(1000000, 9999999999))
-        dataset_entity = {
-            'name': dataset_name,
-            'title': name + ' - ' + metadata['title'],
-            'tags': tags + ' ' + metadata['tags'],
-            'notes': metadata['notes'],
-            'url': metadata['url'],
-            'author': metadata['author'],
-            'author_email': metadata['author_email'],
-            'maintainer': metadata['maintainer'],
-            'maintainer_email': metadata['maintainer_email'],
-            'license': metadata['license'],
-        }
-        return dataset_entity
-
-    def extract_file(zipped_file, name, extract_path):
-        (dirname, filename) = os.path.split(name)
-        new_path = os.path.join(extract_path, dirname)
-        extracted_filename = os.path.join(extract_path, name)
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-        fd = open(extracted_filename,"w")
-        fd.write(zipped_file.read(name))
-        fd.close()
-        return extracted_filename
-
-# Copy the file
-origin_file = '/home/www-data/swissBOUNDARIES3D080312.zip'
-origin_path, file_name = os.path.split(origin_file)
-temp_dir = tempfile.mkdtemp()
-shutil.copy(origin_file, temp_dir);
-temporary_file = os.path.join(temp_dir, file_name) 
-
-csw = ckan_csw.SwisstopoCkanMetadata();
-metadata = csw.get_ckan_metadata('swissboundaries3D')
-
-aggregates = defaultdict(list)
-# Unzip the file
-zipped_file = zipfile.ZipFile(temporary_file)
-for name in zipped_file.namelist():
-    (dirname, filename) = os.path.split(name)
-    pure_name, file_extension = os.path.splitext(filename)
-    dataset_name = pure_name.lower().replace(".","-")
-    if file_extension not in ['.pdf']:
-    	print "Extracting " + name
-        extracted_filename = extract_file(zipped_file, name, temp_dir)
-        resource = {
-            'filename': extracted_filename,
-            'title': 'swissboundaries3D - ' + filename, 
-            'description': 'swissboundaries ' + file_extension + ' file',
-            'format': file_extension[1:]
-        }
-        aggregates[dataset_name].append(resource)
-
-
-for key, aggregate in aggregates.iteritems():
-    dataset = create_dataset(key, 'swissboundaries Verwaltungseinheiten', 'swissboundaries ' + key, metadata)
-    ckan.package_register_post(dataset)
-
-    for resource in aggregate:
-        pprint(resource)
+        # Get the URL
+        log.debug(json.loads(harvest_object.content))
+        name = json.loads(harvest_object.content)['name']
+        log.debug(harvest_object.content)
+    
+        # Get contents
         try:
-            dataset = ckan.add_package_resource(dataset['name'], resource['filename'], name=resource['title'], resource_type='data', format=resource['format'], description=resource['description'])
-        except ValueError as e:
-            print e
-    pprint(dataset)
+            harvest_object.save()
+            log.debug('successfully processed ' + name)
+            return True
+        except Exception, e:
+            log.exception(e)
+    
+    def import_stage(self, harvest_object):
+        log.debug('In SwisstopoHarvester import_stage')
 
-shutil.rmtree(temp_dir);
+        if not harvest_object:
+            log.error('No harvest object received')
+            return False
+        
+        try:
+            package_dict = json.loads(harvest_object.content)
+
+            package_dict['id'] = harvest_object.guid
+            package_dict['name'] = self._gen_new_name(package_dict['title'])
+
+            tags = package_dict['tags']
+            package_dict['tags'] = []
+            package_dict['tags'].extend([t for t in tags.split()])
+
+            user = model.User.get(self.HARVEST_USER)
+            context = {
+                'model': model,
+                'session': Session,
+                'user': self.HARVEST_USER
+                }
+            
+            # Find or create group the dataset should get assigned to
+            package_dict['groups'] = self._find_or_create_groups(context)
+
+            # Find or create the organization the dataset should get assigned to
+            package_dict['owner_org'] = self._find_or_create_organization(context)
+
+            package = model.Package.get(package_dict['id'])
+            pkg_role = model.PackageRole(package=package, user=user, role=model.Role.ADMIN)
+
+            log.debug('Save or update package %s (%s)' % (package_dict['name'],package_dict['id']))
+            result = self._create_or_update_package(package_dict, harvest_object)
+
+            log.debug('Save or update term translations')
+            self._submit_term_translations(context, package_dict)
+            Session.commit()
+
+        except Exception, e:
+            log.exception(e)
+        return True
+
+    def _find_or_create_groups(self, context):
+        group_name = self.GROUPS['de'][0]
+        data_dict = {
+            'id': group_name,
+            'name': self._gen_new_name(group_name),
+            'title': group_name
+            }
+        try:
+            group = get_action('group_show')(context, data_dict)
+        except:
+            group = get_action('group_create')(context, data_dict)
+            log.info('created the group ' + group['id'])
+        group_ids = []
+        group_ids.append(group['id'])
+        return group_ids
+
+    def _find_or_create_organization(self, context):
+        try:
+            data_dict = {
+                'permission': 'edit_group',
+                'id': self._gen_new_name(self.ORGANIZATION['de']),
+                'name': self._gen_new_name(self.ORGANIZATION['de']),
+                'title': self.ORGANIZATION['de']
+            }
+            organization = get_action('organization_show')(context, data_dict)
+        except:
+            organization = get_action('organization_create')(context, data_dict)
+        return organization['id']
+
+    def _generate_term_translations(self):
+        '''
+        '''
+        try:
+            translations = []
+
+            for k,v in self.ORGANIZATION.items():
+                if k != u'de':
+                    translations.append({
+                        'lang_code': k,
+                        'term': self.ORGANIZATION[u'de'],
+                        'term_translation': v
+                        })
+
+            for k,v in self.GROUPS.items():
+                if k != u'de':
+                    translations.append({
+                        'lang_code': k,
+                        'term': self.GROUPS[u'de'],
+                        'term_translation': v
+                        })
+
+            return translations
+
+
+        except Exception, e:
+            log.exception(e)
+            return []
+
+    def _submit_term_translations(self, context, package_dict):
+        for translation in package_dict['translations']:
+            action.update.term_translation_update(context, translation)
+                
+    def _generate_resources_dict_array(self, dataset_name):
+        try:
+            resources = []
+            prefix = dataset_name + u'/'
+            s3_helper = s3.S3()
+            for file in s3_helper.list(prefix=prefix):
+                resources.append({
+                    'url': self.FILES_BASE_URL + '/' + file,
+                    'name': file.replace(prefix, u''),
+                    'format': self._guess_format(file)
+                })
+            return resources
+        except Exception, e:
+            log.exception(e)
+            return []
+
+    def _guess_format(self, file_name):
+        '''
+        Return the format for a given full filename
+        '''
+        _, file_extension = os.path.splitext(file_name.lower())
+        return file_extension[1:]
+
