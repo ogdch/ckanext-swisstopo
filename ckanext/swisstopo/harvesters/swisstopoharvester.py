@@ -78,11 +78,22 @@ class SwisstopoHarvester(HarvesterBase):
         ids = []
         for dataset_name, dataset in self.DATASETS.iteritems():
             csw = ckan_csw.SwisstopoCkanMetadata();
-            metadata = csw.get_ckan_metadata(dataset['csw_query'])
+            metadata = csw.get_ckan_metadata(dataset['csw_query'], 'de').copy()
+            metadata_fr = csw.get_ckan_metadata(dataset['csw_query'], 'fr').copy()
+            metadata_it = csw.get_ckan_metadata(dataset['csw_query'], 'it').copy()
+            metadata_en = csw.get_ckan_metadata(dataset['csw_query'], 'en').copy()
             log.debug(metadata)
             
             metadata['translations'] = self._generate_term_translations()
             log.debug("Translations: %s" % metadata['translations'])
+
+            metadata_trans = {
+                'de': metadata,
+                'fr': metadata_fr,
+                'it': metadata_it,
+                'en': metadata_en,
+            }
+            metadata['translations'].extend(self._generate_metadata_translations(metadata_trans))
 
             metadata['resources'] = self._generate_resources_dict_array(dataset_name)
             log.debug(metadata['resources'])
@@ -190,6 +201,7 @@ class SwisstopoHarvester(HarvesterBase):
 
     def _generate_term_translations(self):
         '''
+        Generate term translatations for groups, organizations and metadata
         '''
         try:
             translations = []
@@ -217,8 +229,28 @@ class SwisstopoHarvester(HarvesterBase):
             log.exception(e)
             return []
 
+    def _generate_metadata_translations(self, metadata_translations):
+        try:
+            translations = []
+
+            for lang, metadata in metadata_translations.items():
+                if lang != u'de':
+                    for key, term in metadata_translations[lang].items():
+                        if term and term != metadata_translations['de'][key]:
+                            translations.append({
+                                'lang_code': lang,
+                                'term': metadata_translations['de'][key],
+                                'term_translation': term
+                            })
+            return translations
+
+        except Exception, e:
+            log.exception(e)
+            return []
+
     def _submit_term_translations(self, context, package_dict):
         for translation in package_dict['translations']:
+            log.debug(translation)
             action.update.term_translation_update(context, translation)
                 
     def _generate_resources_dict_array(self, dataset_name):
