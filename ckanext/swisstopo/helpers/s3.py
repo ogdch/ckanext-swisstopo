@@ -15,11 +15,11 @@ class S3():
     def __repr__(self):
         return "<S3 key:%s token:%s bucket_name:%s>" % (self.key, self.token, self.bucket_name)
 
-    def list(self):
+    def list(self, prefix=None):
         conn = S3Connection(self.key,self.token)
         bucket = conn.get_bucket(self.bucket_name)
-        for key in bucket.list():
-            print key.name.encode('utf-8')
+        for key in bucket.list(prefix=prefix):
+            yield key.name.encode('utf-8')
 
 class ConfigEntryNotFoundError(Exception):
     pass

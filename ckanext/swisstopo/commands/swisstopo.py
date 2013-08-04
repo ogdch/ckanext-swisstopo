@@ -49,7 +49,8 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
 
     def listCmd(self):
         s3_helper = s3.S3();
-        s3_helper.list()
+        for file in s3_helper.list():
+            print file
 
     def cswCmd(self, query=None):
         if (query is None):
