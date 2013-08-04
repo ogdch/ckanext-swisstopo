@@ -1,6 +1,8 @@
 import traceback
 from owslib.csw import CatalogueServiceWeb
-from ckanext.swisstopo.etree.etree import etree
+from lxml import etree
+import logging
+log = logging.getLogger(__name__)
 
 namespaces = {
     'atom': 'http://www.w3.org/2005/Atom',
@@ -43,7 +45,7 @@ class XmlAttribute(Attribute):
 
 class XPathAttribute(Attribute):
     def get_element(self, xml):
-        return xml.find(self._config, namespaces)
+        return xml.xpath(self._config, namespaces=namespaces)[0]
 
     def get_value(self, **kwargs):
         self.env.update(kwargs)
@@ -51,13 +53,14 @@ class XPathAttribute(Attribute):
         try:
             # this should probably return a XPathTextAttribute
             value = self.get_element(xml)
-        except:
+        except Exception as e:
+            log.debug(e)
             value = ''
         return value
 
 class XPathMultiAttribute(XPathAttribute):
     def get_element(self, xml):
-        return xml.findall(self._config, namespaces)
+        return xml.xpath(self._config, namespaces=namespaces)
 
 class XPathTextAttribute(XPathAttribute):
     def get_value(self, **kwargs):
@@ -159,8 +162,11 @@ class CkanMetadata(object):
     def get_ckan_metadata(self, dataset_name):
         """ Returns the requested dataset mapped to CKAN attributes """
         id = self.get_id_by_dataset_name(dataset_name)
+        log.debug("Dataset ID: %s" % id)
+
         dataset_xml = etree.fromstring(self.get_xml(id))
         for key in self.metadata:
+            log.debug("Metadata key: %s" % key)
             attribute = self.get_attribute(dataset_name, key)
             self.metadata[key] = attribute.get_value(xml=dataset_xml)
         return self.metadata

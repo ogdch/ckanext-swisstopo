@@ -1,0 +1,1 @@
+from ckanext.swisstopo.harvesters.swisstopoharvester import SwisstopoHarvester
