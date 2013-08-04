@@ -27,7 +27,7 @@ setup(
     [ckan.plugins]
 	#swisstopo_plugin=ckanext.swisstopo:PluginClass
     swisstopo=ckanext.swisstopo.plugins:SwisstopoHarvest
-    swisstopo_harvester=ckanext.swisstopo.harvester:SwisstopoHarvester
+    swisstopo_harvester=ckanext.swisstopo.harvesters:SwisstopoHarvester
     [paste.paster_command]
     swisstopo=ckanext.swisstopo.commands.swisstopo:SwisstopoCommand
     swisstopo_harvest=ckanext.swisstopo.commands.harvester:Harvester
