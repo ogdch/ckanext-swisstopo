@@ -50,6 +50,12 @@ class SwisstopoHarvester(HarvesterBase):
 
     FILES_BASE_URL = 'http://opendata-ch.s3.amazonaws.com'
 
+    LICENSE = {
+        u'de': u'Lizenz für Fertigprodukte',
+        u'fr': u'Accord relatif aux produits finis',
+        u'it': u'Licenza per prodotti finiti',
+        u'en': u'Licence for finished products',
+    }
     ORGANIZATION = {
         u'de': u'Bundesamt für Landestopografie swisstopo',
         u'fr': u'Office fédéral de topographie swisstopo',
@@ -98,6 +104,8 @@ class SwisstopoHarvester(HarvesterBase):
             metadata['resources'] = self._generate_resources_dict_array(dataset_name)
             log.debug(metadata['resources'])
 
+            metadata['license_id'] = self.LICENSE['de']
+
             obj = HarvestObject(
                 guid = metadata['id'],
                 job = harvest_job,
@@ -138,10 +146,6 @@ class SwisstopoHarvester(HarvesterBase):
 
             package_dict['id'] = harvest_object.guid
             package_dict['name'] = self._gen_new_name(package_dict['title'])
-
-            tags = package_dict['tags']
-            package_dict['tags'] = []
-            package_dict['tags'].extend([t for t in tags.split()])
 
             user = model.User.get(self.HARVEST_USER)
             context = {
@@ -206,6 +210,14 @@ class SwisstopoHarvester(HarvesterBase):
         try:
             translations = []
 
+            for lang, lic in self.LICENSE.items():
+                if lang != u'de':
+                    translations.append({
+                        'lang_code': lang,
+                        'term': self.LICENSE[u'de'],
+                        'term_translation': lic
+                        })
+
             for lang, org in self.ORGANIZATION.items():
                 if lang != u'de':
                     translations.append({
@@ -238,11 +250,19 @@ class SwisstopoHarvester(HarvesterBase):
                 if lang != u'de':
                     for key, term in metadata_translations[lang].items():
                         if term and term != metadata_translations[u'de'][key]:
-                            translations.append({
-                                'lang_code': lang,
-                                'term': metadata_translations[u'de'][key],
-                                'term_translation': term
-                            })
+                            if key == 'tags' and len(term) == len(metadata_translations[u'de'][key]):
+                                for idx, subterm in enumerate(term):
+                                    translations.append({
+                                        'lang_code': lang,
+                                        'term': self._gen_new_name(metadata_translations[u'de'][key][idx]),
+                                        'term_translation': self._gen_new_name(subterm)
+                                    })
+                            else:
+                                translations.append({
+                                    'lang_code': lang,
+                                    'term': metadata_translations[u'de'][key],
+                                    'term_translation': term
+                                })
             return translations
 
         except Exception, e:

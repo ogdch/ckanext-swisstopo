@@ -59,7 +59,7 @@ class XPathAttribute(Attribute):
             # this should probably return a XPathTextAttribute
             value = self.get_element(xml, xpath)
         except Exception as e:
-            log.debug(e)
+            log.exception(e)
             value = ''
         return value
 
@@ -102,7 +102,21 @@ class MultiAttribute(Attribute):
             except TypeError:
                 value = value + new_value + separator
         return value.strip(separator)
-    
+
+class ArrayAttribute(Attribute):
+    def get_value(self, **kwargs):
+        self.env.update(kwargs)
+        value = []
+        for attribute in self._config:
+            new_value = attribute.get_value(**kwargs)
+            try:
+                iterator = iter(new_value)
+                for inner_attribute in iterator:
+                    # it should be possible to call inner_attribute.get_value and the right thing(tm) happens'
+                    value.append(inner_attribute.text if hasattr(inner_attribute, 'text') else inner_attribute)
+            except TypeError:
+                value.append(new_value)
+        return value
 
 class FirstInOrderAttribute(CombinedAttribute):
     def get_value(self, **kwargs):
@@ -126,7 +140,7 @@ class CkanMetadata(object):
             'author_email', 
             'maintainer', 
             'maintainer_email',
-            'license',
+            'license_url',
             'version',
             'notes',
             'tags',
@@ -210,10 +224,10 @@ class SwisstopoCkanMetadata(CkanMetadata):
             XPathTextAttribute(".//gmd:identificationInfo//gmd:pointOfContact[1]//gmd:CI_RoleCode[@codeListValue='owner']/ancestor::gmd:pointOfContact//gmd:address//gmd:electronicMailAddress/gco:CharacterString"),
             XPathTextAttribute(".//gmd:identificationInfo//gmd:pointOfContact//gmd:address//gmd:electronicMailAddress/gco:CharacterString"),
         ]), 
-        'license': StringAttribute('http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'),
+        'license_url': StringAttribute('http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'),
         'version': XPathTextAttribute(".//gmd:identificationInfo//gmd:citation//gmd:date/gco:Date"),
         'notes': XPathTextAttribute(".//gmd:identificationInfo//gmd:abstract//gmd:textGroup/gmd:LocalisedCharacterString[@locale='#DE']"),
-        'tags': MultiAttribute([XPathMultiTextAttribute(".//gmd:identificationInfo//gmd:descriptiveKeywords//gmd:keyword//gmd:textGroup/gmd:LocalisedCharacterString[@locale='#DE']")], separator=' '),
+        'tags': ArrayAttribute([XPathMultiTextAttribute(".//gmd:identificationInfo//gmd:descriptiveKeywords//gmd:keyword//gmd:textGroup/gmd:LocalisedCharacterString[@locale='#DE']")]),
         'metadata_url': StringAttribute(''),
         'metadata_raw': XmlAttribute(''),
     }
