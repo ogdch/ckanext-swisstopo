@@ -15,7 +15,7 @@ from ckan.logic import ValidationError, NotFound, get_action, action
 from ckan.lib.helpers import json
 
 from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, HarvestObjectError
-from ckanext.harvest.harvesters import HarvesterBase
+from base import OGDCHHarvesterBase
 
 from ckanext.swisstopo.helpers import ckan_csw
 from ckanext.swisstopo.helpers import s3
@@ -23,7 +23,7 @@ from ckanext.swisstopo.helpers import s3
 import logging
 log = logging.getLogger(__name__)
 
-class SwisstopoHarvester(HarvesterBase):
+class SwisstopoHarvester(OGDCHHarvesterBase):
     '''
     The harvester for swisstopo
     '''
@@ -105,6 +105,7 @@ class SwisstopoHarvester(HarvesterBase):
             log.debug(metadata['resources'])
 
             metadata['license_id'] = self.LICENSE['de']
+            metadata['layer_name'] = dataset_name
 
             obj = HarvestObject(
                 guid = metadata['id'],
@@ -145,8 +146,7 @@ class SwisstopoHarvester(HarvesterBase):
             package_dict = json.loads(harvest_object.content)
 
             package_dict['id'] = harvest_object.guid
-            package_dict['name'] = self._gen_new_name(package_dict['title'])
-
+            package_dict['name'] = self._gen_new_name(package_dict['layer_name'])
             user = model.User.get(self.HARVEST_USER)
             context = {
                 'model': model,
