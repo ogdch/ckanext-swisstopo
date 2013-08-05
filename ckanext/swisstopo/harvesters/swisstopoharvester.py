@@ -51,16 +51,16 @@ class SwisstopoHarvester(HarvesterBase):
     FILES_BASE_URL = 'http://opendata-ch.s3.amazonaws.com'
 
     ORGANIZATION = {
-        'de': u'Bundesamt für Landestopografie swisstopo',
-        'fr': u'Office fédéral de topographie swisstopo',
-        'it': u'Ufficio federale di topografia swisstopo',
-        'en': u'Federal Office of Topography swisstopo',
+        u'de': u'Bundesamt für Landestopografie swisstopo',
+        u'fr': u'Office fédéral de topographie swisstopo',
+        u'it': u'Ufficio federale di topografia swisstopo',
+        u'en': u'Federal Office of Topography swisstopo',
     }
     GROUPS = {
-        'de': [u'Raum und Umwelt'],
-        'fr': [u'Espace et environnement'],
-        'it': [u'Territorio e ambiente'],
-        'en': [u'Territory and environment']
+        u'de': [u'Raum und Umwelt'],
+        u'fr': [u'Espace et environnement'],
+        u'it': [u'Territorio e ambiente'],
+        u'en': [u'Territory and environment']
     }
  
 
@@ -78,11 +78,22 @@ class SwisstopoHarvester(HarvesterBase):
         ids = []
         for dataset_name, dataset in self.DATASETS.iteritems():
             csw = ckan_csw.SwisstopoCkanMetadata();
-            metadata = csw.get_ckan_metadata(dataset['csw_query'])
+            metadata = csw.get_ckan_metadata(dataset['csw_query'], u'de').copy()
+            metadata_fr = csw.get_ckan_metadata(dataset['csw_query'], u'fr').copy()
+            metadata_it = csw.get_ckan_metadata(dataset['csw_query'], u'it').copy()
+            metadata_en = csw.get_ckan_metadata(dataset['csw_query'], u'en').copy()
             log.debug(metadata)
             
             metadata['translations'] = self._generate_term_translations()
             log.debug("Translations: %s" % metadata['translations'])
+
+            metadata_trans = {
+                u'de': metadata,
+                u'fr': metadata_fr,
+                u'it': metadata_it,
+                u'en': metadata_en,
+            }
+            metadata['translations'].extend(self._generate_metadata_translations(metadata_trans))
 
             metadata['resources'] = self._generate_resources_dict_array(dataset_name)
             log.debug(metadata['resources'])
@@ -179,9 +190,9 @@ class SwisstopoHarvester(HarvesterBase):
         try:
             data_dict = {
                 'permission': 'edit_group',
-                'id': self._gen_new_name(self.ORGANIZATION['de']),
-                'name': self._gen_new_name(self.ORGANIZATION['de']),
-                'title': self.ORGANIZATION['de']
+                'id': self._gen_new_name(self.ORGANIZATION[u'de']),
+                'name': self._gen_new_name(self.ORGANIZATION[u'de']),
+                'title': self.ORGANIZATION[u'de']
             }
             organization = get_action('organization_show')(context, data_dict)
         except:
@@ -190,25 +201,27 @@ class SwisstopoHarvester(HarvesterBase):
 
     def _generate_term_translations(self):
         '''
+        Generate term translatations for groups, organizations and metadata
         '''
         try:
             translations = []
 
-            for k,v in self.ORGANIZATION.items():
-                if k != u'de':
+            for lang, org in self.ORGANIZATION.items():
+                if lang != u'de':
                     translations.append({
-                        'lang_code': k,
+                        'lang_code': lang,
                         'term': self.ORGANIZATION[u'de'],
-                        'term_translation': v
+                        'term_translation': org
                         })
 
-            for k,v in self.GROUPS.items():
-                if k != u'de':
-                    translations.append({
-                        'lang_code': k,
-                        'term': self.GROUPS[u'de'],
-                        'term_translation': v
-                        })
+            for lang, groups in self.GROUPS.iteritems():
+                if lang != u'de':
+                    for idx, group in enumerate(self.GROUPS[lang]):
+                        translations.append({
+                            'lang_code': lang,
+                            'term': self.GROUPS[u'de'][idx],
+                            'term_translation': group
+                            })
 
             return translations
 
@@ -217,8 +230,28 @@ class SwisstopoHarvester(HarvesterBase):
             log.exception(e)
             return []
 
+    def _generate_metadata_translations(self, metadata_translations):
+        try:
+            translations = []
+
+            for lang, metadata in metadata_translations.items():
+                if lang != u'de':
+                    for key, term in metadata_translations[lang].items():
+                        if term and term != metadata_translations[u'de'][key]:
+                            translations.append({
+                                'lang_code': lang,
+                                'term': metadata_translations[u'de'][key],
+                                'term_translation': term
+                            })
+            return translations
+
+        except Exception, e:
+            log.exception(e)
+            return []
+
     def _submit_term_translations(self, context, package_dict):
         for translation in package_dict['translations']:
+            log.debug(translation)
             action.update.term_translation_update(context, translation)
                 
     def _generate_resources_dict_array(self, dataset_name):

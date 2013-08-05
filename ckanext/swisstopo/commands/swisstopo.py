@@ -52,13 +52,13 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
         for file in s3_helper.list():
             print file
 
-    def cswCmd(self, query=None):
+    def cswCmd(self, query=None, lang='de'):
         if (query is None):
             print "Argument 'query' must be set"
             self.helpCmd()
             sys.exit(1)
         csw = ckan_csw.SwisstopoCkanMetadata();
-        print csw.get_ckan_metadata(query)
+        print csw.get_ckan_metadata(query, lang)
 
 
     def importCmd(self):
