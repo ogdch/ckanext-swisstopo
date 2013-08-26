@@ -48,8 +48,6 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         },
     }
 
-    FILES_BASE_URL = 'http://opendata-ch.s3.amazonaws.com'
-
     LICENSE = {
         u'de': u'Lizenz für Fertigprodukte',
         u'fr': u'Accord relatif aux produits finis',
@@ -68,7 +66,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         u'it': [u'Territorio e ambiente'],
         u'en': [u'Territory and environment']
     }
- 
+
 
     def info(self):
         return {
@@ -89,7 +87,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             metadata_it = csw.get_ckan_metadata(dataset['csw_query'], u'it').copy()
             metadata_en = csw.get_ckan_metadata(dataset['csw_query'], u'en').copy()
             log.debug(metadata)
-            
+
             metadata['translations'] = self._generate_term_translations()
             log.debug("Translations: %s" % metadata['translations'])
 
@@ -115,7 +113,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             obj.save()
             log.debug('adding ' + dataset_name + ' to the queue')
             ids.append(obj.id)
-        
+
         return ids
 
 
@@ -126,7 +124,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         log.debug(json.loads(harvest_object.content))
         name = json.loads(harvest_object.content)['name']
         log.debug(harvest_object.content)
-    
+
         # Get contents
         try:
             harvest_object.save()
@@ -134,14 +132,14 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             return True
         except Exception, e:
             log.exception(e)
-    
+
     def import_stage(self, harvest_object):
         log.debug('In SwisstopoHarvester import_stage')
 
         if not harvest_object:
             log.error('No harvest object received')
             return False
-        
+
         try:
             package_dict = json.loads(harvest_object.content)
 
@@ -153,7 +151,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                 'session': Session,
                 'user': self.HARVEST_USER
                 }
-            
+
             # Find or create group the dataset should get assigned to
             package_dict['groups'] = self._find_or_create_groups(context)
 
@@ -273,18 +271,21 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         for translation in package_dict['translations']:
             log.debug(translation)
             action.update.term_translation_update(context, translation)
-                
+
     def _generate_resources_dict_array(self, dataset_name):
         try:
             resources = []
             prefix = dataset_name + u'/'
             s3_helper = s3.S3()
-            for file in s3_helper.list(prefix=prefix):
-                resources.append({
-                    'url': self.FILES_BASE_URL + '/' + file,
-                    'name': file.replace(prefix, u''),
-                    'format': self._guess_format(file)
-                })
+
+            for key in s3_helper.list(prefix=prefix):
+                if key.size > 0:
+                    resources.append({
+                        'url': key.generate_url(0, query_auth=False,
+                            force_http=True),
+                        'name': os.path.basename(key.name),
+                        'format': self._guess_format(key.name)
+                    })
             return resources
         except Exception, e:
             log.exception(e)
