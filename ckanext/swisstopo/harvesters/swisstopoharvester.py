@@ -152,6 +152,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                 'user': self.HARVEST_USER
                 }
 
+            package_dict['licence_id'] = package_dict.get('license')
+
             # Find or create group the dataset should get assigned to
             package_dict['groups'] = self._find_or_create_groups(context)
 
