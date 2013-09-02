@@ -132,6 +132,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             return True
         except Exception, e:
             log.exception(e)
+            raise
 
     def import_stage(self, harvest_object):
         log.debug('In SwisstopoHarvester import_stage')
@@ -170,6 +171,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
         except Exception, e:
             log.exception(e)
+            raise
         return True
 
     def _find_or_create_groups(self, context):
@@ -238,7 +240,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
         except Exception, e:
             log.exception(e)
-            return []
+            raise
 
     def _generate_metadata_translations(self, metadata_translations):
         try:
@@ -265,7 +267,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
         except Exception, e:
             log.exception(e)
-            return []
+            raise
 
     def _submit_term_translations(self, context, package_dict):
         for translation in package_dict['translations']:
@@ -289,7 +291,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             return resources
         except Exception, e:
             log.exception(e)
-            return []
+            raise
 
     def _guess_format(self, file_name):
         '''
