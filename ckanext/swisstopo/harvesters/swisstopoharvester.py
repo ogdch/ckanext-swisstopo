@@ -46,6 +46,9 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         'ch.swisstopo.pixelkarte-farbe-pk1000.noscale': {
             'csw_query': 'Landeskarte 1:1 Mio.',
         },
+        'ch.swisstopo-vd.ortschaftenverzeichnis_plz': {
+            'csw_query': 'Amtliches Ortschaftenverzeichnis',
+        }
     }
 
     LICENSE = {
