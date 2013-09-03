@@ -162,6 +162,12 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             # Find or create the organization the dataset should get assigned to
             package_dict['owner_org'] = self._find_or_create_organization(context)
 
+            # Save license url in extras
+            extras = []
+            if 'license_url' in package_dict:
+                extras.append(('license_url', package_dict['license_url']))
+            package_dict['extras'] = extras
+
             package = model.Package.get(package_dict['id'])
             pkg_role = model.PackageRole(package=package, user=user, role=model.Role.ADMIN)
 
