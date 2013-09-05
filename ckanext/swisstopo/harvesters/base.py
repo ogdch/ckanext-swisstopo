@@ -1,5 +1,8 @@
 from ckanext.harvest.harvesters import HarvesterBase
 
+from sqlalchemy.sql import update,and_, bindparam
+from sqlalchemy.exc import InvalidRequestError
+
 from ckan import plugins as p
 from ckan import model
 from ckan.model import Session
