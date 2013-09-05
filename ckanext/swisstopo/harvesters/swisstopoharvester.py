@@ -222,7 +222,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             translations = []
 
             for lang, lic in self.LICENSE.items():
-                if lang != u'de'
+                if lang != u'de':
                     translations.append({
                         'lang_code': lang,
                         'term': self.LICENSE[u'de'][0],
