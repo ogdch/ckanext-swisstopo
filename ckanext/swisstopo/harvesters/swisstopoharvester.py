@@ -52,10 +52,10 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
     }
 
     LICENSE = {
-        u'de': u'Lizenz für Fertigprodukte',
-        u'fr': u'Accord relatif aux produits finis',
-        u'it': u'Licenza per prodotti finiti',
-        u'en': u'Licence for finished products',
+        u'de': (u'Lizenz für Fertigprodukte', 'http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'),
+        u'fr': (u'Accord relatif aux produits finis', 'http://www.toposhop.admin.ch/fr/shop/terms/use/finished_products'),
+        u'it': (u'Licenza per prodotti finiti', 'http://www.toposhop.admin.ch/it/shop/terms/use/finished_products'),
+        u'en': (u'Licence for finished products', 'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'),
     }
     ORGANIZATION = {
         u'de': u'Bundesamt für Landestopografie swisstopo',
@@ -105,7 +105,9 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             metadata['resources'] = self._generate_resources_dict_array(dataset_name)
             log.debug(metadata['resources'])
 
-            metadata['license_id'] = self.LICENSE['de']
+            metadata['license_id'] = self.LICENSE['de'][0]
+            metadata['license_url'] = self.LICENSE['de'][1]
+
             metadata['layer_name'] = dataset_name
 
             obj = HarvestObject(
@@ -220,11 +222,16 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             translations = []
 
             for lang, lic in self.LICENSE.items():
-                if lang != u'de':
+                if lang != u'de'
                     translations.append({
                         'lang_code': lang,
-                        'term': self.LICENSE[u'de'],
-                        'term_translation': lic
+                        'term': self.LICENSE[u'de'][0],
+                        'term_translation': lic[0]
+                        })
+                    translations.append({
+                        'lang_code': lang,
+                        'term': self.LICENSE[u'de'][1],
+                        'term_translation': lic[1]
                         })
 
             for lang, org in self.ORGANIZATION.items():
