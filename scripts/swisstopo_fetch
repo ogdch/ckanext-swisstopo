@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DAEMON=/home/www-data/pyenv/bin/python
-ARGS="/home/www-data/pyenv/bin/paster --plugin=ckanext-swisstopo swisstopoharvester fetch_consumer --config=/home/www-data/production.ini"
+ARGS="/home/www-data/pyenv/bin/paster --plugin=ckanext-swisstopo swisstopo_harvest fetch_consumer --config=/home/www-data/production.ini"
 PIDFILE=/home/www-data/pid/swisstopo_fetch.pid
 
 function start {
