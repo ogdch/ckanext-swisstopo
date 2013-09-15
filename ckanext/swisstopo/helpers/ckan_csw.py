@@ -1,6 +1,8 @@
 import traceback
 from owslib.csw import CatalogueServiceWeb
-from ckanext.swisstopo.etree.etree import etree
+from lxml import etree
+import logging
+log = logging.getLogger(__name__)
 
 namespaces = {
     'atom': 'http://www.w3.org/2005/Atom',
@@ -42,22 +44,28 @@ class XmlAttribute(Attribute):
         return etree.tostring(xml)
 
 class XPathAttribute(Attribute):
-    def get_element(self, xml):
-        return xml.find(self._config, namespaces)
+    def get_element(self, xml, xpath):
+        return xml.xpath(xpath, namespaces=namespaces)[0]
 
     def get_value(self, **kwargs):
         self.env.update(kwargs)
         xml = self.env['xml']
+
+        lang = self.env['lang']
+        xpath = self._config.replace('#DE', '#' + lang.upper())
+        log.debug("Lang: %s, XPath: %s" % (lang, xpath))
+
         try:
             # this should probably return a XPathTextAttribute
-            value = self.get_element(xml)
-        except:
+            value = self.get_element(xml, xpath)
+        except Exception as e:
+            log.exception(e)
             value = ''
         return value
 
 class XPathMultiAttribute(XPathAttribute):
-    def get_element(self, xml):
-        return xml.findall(self._config, namespaces)
+    def get_element(self, xml, xpath):
+        return xml.xpath(xpath, namespaces=namespaces)
 
 class XPathTextAttribute(XPathAttribute):
     def get_value(self, **kwargs):
@@ -94,7 +102,21 @@ class MultiAttribute(Attribute):
             except TypeError:
                 value = value + new_value + separator
         return value.strip(separator)
-    
+
+class ArrayAttribute(Attribute):
+    def get_value(self, **kwargs):
+        self.env.update(kwargs)
+        value = []
+        for attribute in self._config:
+            new_value = attribute.get_value(**kwargs)
+            try:
+                iterator = iter(new_value)
+                for inner_attribute in iterator:
+                    # it should be possible to call inner_attribute.get_value and the right thing(tm) happens'
+                    value.append(inner_attribute.text if hasattr(inner_attribute, 'text') else inner_attribute)
+            except TypeError:
+                value.append(new_value)
+        return value
 
 class FirstInOrderAttribute(CombinedAttribute):
     def get_value(self, **kwargs):
@@ -118,7 +140,7 @@ class CkanMetadata(object):
             'author_email', 
             'maintainer', 
             'maintainer_email',
-            'license',
+            'license_url',
             'version',
             'notes',
             'tags',
@@ -156,13 +178,16 @@ class CkanMetadata(object):
             raise DatasetNotFoundError("Dataset with id %s not found" % id)
         return dataset_xml_string
 
-    def get_ckan_metadata(self, dataset_name):
+    def get_ckan_metadata(self, dataset_name, language='de'):
         """ Returns the requested dataset mapped to CKAN attributes """
         id = self.get_id_by_dataset_name(dataset_name)
+        log.debug("Dataset ID: %s" % id)
+
         dataset_xml = etree.fromstring(self.get_xml(id))
         for key in self.metadata:
+            log.debug("Metadata key: %s" % key)
             attribute = self.get_attribute(dataset_name, key)
-            self.metadata[key] = attribute.get_value(xml=dataset_xml)
+            self.metadata[key] = attribute.get_value(xml=dataset_xml, lang=language)
         return self.metadata
 
 
@@ -199,10 +224,10 @@ class SwisstopoCkanMetadata(CkanMetadata):
             XPathTextAttribute(".//gmd:identificationInfo//gmd:pointOfContact[1]//gmd:CI_RoleCode[@codeListValue='owner']/ancestor::gmd:pointOfContact//gmd:address//gmd:electronicMailAddress/gco:CharacterString"),
             XPathTextAttribute(".//gmd:identificationInfo//gmd:pointOfContact//gmd:address//gmd:electronicMailAddress/gco:CharacterString"),
         ]), 
-        'license': StringAttribute('http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'),
+        'license_url': StringAttribute('http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'),
         'version': XPathTextAttribute(".//gmd:identificationInfo//gmd:citation//gmd:date/gco:Date"),
         'notes': XPathTextAttribute(".//gmd:identificationInfo//gmd:abstract//gmd:textGroup/gmd:LocalisedCharacterString[@locale='#DE']"),
-        'tags': MultiAttribute([XPathMultiTextAttribute(".//gmd:identificationInfo//gmd:descriptiveKeywords//gmd:keyword//gmd:textGroup/gmd:LocalisedCharacterString[@locale='#DE']")], separator=' '),
+        'tags': ArrayAttribute([XPathMultiTextAttribute(".//gmd:identificationInfo//gmd:descriptiveKeywords//gmd:keyword//gmd:textGroup/gmd:LocalisedCharacterString[@locale='#DE']")]),
         'metadata_url': StringAttribute(''),
         'metadata_raw': XmlAttribute(''),
     }
