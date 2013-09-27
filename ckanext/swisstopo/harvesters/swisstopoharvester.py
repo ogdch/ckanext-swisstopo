@@ -13,6 +13,8 @@ from ckan import model
 from ckan.model import Session, Package
 from ckan.logic import ValidationError, NotFound, get_action, action
 from ckan.lib.helpers import json
+from ckanext.harvest.harvesters.base import munge_tag
+from ckan.lib.munge import munge_title_to_name
 
 from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, HarvestObjectError
 from base import OGDCHHarvesterBase
@@ -150,7 +152,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             package_dict = json.loads(harvest_object.content)
 
             package_dict['id'] = harvest_object.guid
-            package_dict['name'] = self._gen_new_name(package_dict['layer_name'])
+            package_dict['name'] = munge_title_to_name(package_dict['layer_name'])
             user = model.User.get(self.HARVEST_USER)
             context = {
                 'model': model,
