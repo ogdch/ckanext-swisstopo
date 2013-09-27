@@ -191,7 +191,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         group_name = self.GROUPS['de'][0]
         data_dict = {
             'id': group_name,
-            'name': self._gen_new_name(group_name),
+            'name': munge_title_to_name(group_name),
             'title': group_name
             }
         try:
@@ -207,8 +207,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         try:
             data_dict = {
                 'permission': 'edit_group',
-                'id': self._gen_new_name(self.ORGANIZATION[u'de']),
-                'name': self._gen_new_name(self.ORGANIZATION[u'de']),
+                'id': munge_title_to_name(self.ORGANIZATION[u'de']),
+                'name': munge_title_to_name(self.ORGANIZATION[u'de']),
                 'title': self.ORGANIZATION[u'de']
             }
             organization = get_action('organization_show')(context, data_dict)
@@ -272,8 +272,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                                 for idx, subterm in enumerate(term):
                                     translations.append({
                                         'lang_code': lang,
-                                        'term': self._gen_new_name(metadata_translations[u'de'][key][idx]),
-                                        'term_translation': self._gen_new_name(subterm)
+                                        'term': munge_tag(metadata_translations[u'de'][key][idx]),
+                                        'term_translation': munge_tag(subterm)
                                     })
                             else:
                                 translations.append({
