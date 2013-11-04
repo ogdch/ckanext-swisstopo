@@ -13,6 +13,8 @@ from ckan import model
 from ckan.model import Session, Package
 from ckan.logic import ValidationError, NotFound, get_action, action
 from ckan.lib.helpers import json
+from ckanext.harvest.harvesters.base import munge_tag
+from ckan.lib.munge import munge_title_to_name
 
 from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, HarvestObjectError
 from base import OGDCHHarvesterBase
@@ -58,10 +60,23 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         u'en': (u'Licence for finished products', 'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'),
     }
     ORGANIZATION = {
-        u'de': u'Bundesamt für Landestopografie swisstopo',
-        u'fr': u'Office fédéral de topographie swisstopo',
-        u'it': u'Ufficio federale di topografia swisstopo',
-        u'en': u'Federal Office of Topography swisstopo',
+        'de': {
+            'name': u'Bundesamt für Landestopografie swisstopo',
+            'description': u'Das Kompetenzzentrum der Schweizerischen Eidgenossenschaft für Geoinformation, d.h. für die Beschreibung, Darstellung und Archivierung von raumbezogenen Geodaten.',
+            'website': u'http://www.swisstopo.admin.ch/'
+        },
+        'fr': {
+            'name': u'Office fédéral de topographie swisstopo',
+            'description': u'Le centre de compétence de la Confédération suisse pour les informations géographiques, c\'est-à-dire pour la description, la représentation et l’archivage de données à référence spatiale.'
+        },
+        'it': {
+            'name': u'Ufficio federale di topografia swisstopo',
+            'description': u'Il centro d’eccellenza della Confederazione Elvetica per geoinformazione, cioè per la descrizione, rappresentazione e archiviazione dei dati georeferenziati (geodati).'
+        },
+        'en': {
+            'name': u'Federal Office of Topography swisstopo',
+            'description': u'The centre of competence for the Swiss Confederation responsible for geographical reference data, for instance the description, representation and archiving of geographic spatial data.'
+        }
     }
     GROUPS = {
         u'de': [u'Raum und Umwelt'],
@@ -150,7 +165,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             package_dict = json.loads(harvest_object.content)
 
             package_dict['id'] = harvest_object.guid
-            package_dict['name'] = self._gen_new_name(package_dict['layer_name'])
+            package_dict['name'] = munge_title_to_name(package_dict['layer_name'])
             user = model.User.get(self.HARVEST_USER)
             context = {
                 'model': model,
@@ -189,7 +204,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         group_name = self.GROUPS['de'][0]
         data_dict = {
             'id': group_name,
-            'name': self._gen_new_name(group_name),
+            'name': munge_title_to_name(group_name),
             'title': group_name
             }
         try:
@@ -205,9 +220,16 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         try:
             data_dict = {
                 'permission': 'edit_group',
-                'id': self._gen_new_name(self.ORGANIZATION[u'de']),
-                'name': self._gen_new_name(self.ORGANIZATION[u'de']),
-                'title': self.ORGANIZATION[u'de']
+                'id': munge_title_to_name(self.ORGANIZATION['de']['name']),
+                'name': munge_title_to_name(self.ORGANIZATION['de']['name']),
+                'title': self.ORGANIZATION['de']['name'],
+                'description': self.ORGANIZATION['de']['description'],
+                'extras': [
+                    {
+                        'key': 'website',
+                        'value': self.ORGANIZATION['de']['website']
+                    }
+                ]
             }
             organization = get_action('organization_show')(context, data_dict)
         except:
@@ -235,11 +257,12 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                         })
 
             for lang, org in self.ORGANIZATION.items():
-                if lang != u'de':
-                    translations.append({
-                        'lang_code': lang,
-                        'term': self.ORGANIZATION[u'de'],
-                        'term_translation': org
+                if lang != 'de':
+                    for field in ['name', 'description']:
+                        translations.append({
+                            'lang_code': lang,
+                            'term': self.ORGANIZATION['de'][field],
+                            'term_translation': org[field]
                         })
 
             for lang, groups in self.GROUPS.iteritems():
@@ -270,8 +293,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                                 for idx, subterm in enumerate(term):
                                     translations.append({
                                         'lang_code': lang,
-                                        'term': self._gen_new_name(metadata_translations[u'de'][key][idx]),
-                                        'term_translation': self._gen_new_name(subterm)
+                                        'term': munge_tag(metadata_translations[u'de'][key][idx]),
+                                        'term_translation': munge_tag(subterm)
                                     })
                             else:
                                 translations.append({
