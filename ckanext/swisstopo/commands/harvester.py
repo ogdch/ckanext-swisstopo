@@ -1,11 +1,11 @@
 import sys
-import re
 from pprint import pprint
 
 from ckan import model
 from ckan.logic import get_action, ValidationError
 
 from ckan.lib.cli import CkanCommand
+
 
 class Harvester(CkanCommand):
     '''Harvests remotely mastered metadata
