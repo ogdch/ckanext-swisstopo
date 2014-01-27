@@ -1,22 +1,14 @@
 #n -*- coding: utf-8 -*-
 
-import random
 import os
-import shutil
-import tempfile
-import zipfile
-from pprint import pprint
-from collections import defaultdict
-
-from ckan.lib.base import c
 from ckan import model
-from ckan.model import Session, Package
-from ckan.logic import ValidationError, NotFound, get_action, action
+from ckan.model import Session
+from ckan.logic import get_action, action
 from ckan.lib.helpers import json
 from ckanext.harvest.harvesters.base import munge_tag
 from ckan.lib.munge import munge_title_to_name
 
-from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, HarvestObjectError
+from ckanext.harvest.model import HarvestObject
 from base import OGDCHHarvesterBase
 
 from ckanext.swisstopo.helpers import ckan_csw
@@ -24,6 +16,7 @@ from ckanext.swisstopo.helpers import s3
 
 import logging
 log = logging.getLogger(__name__)
+
 
 class SwisstopoHarvester(OGDCHHarvesterBase):
     '''
@@ -54,28 +47,60 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
     }
 
     LICENSE = {
-        u'de': (u'Lizenz für Fertigprodukte', 'http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'),
-        u'fr': (u'Accord relatif aux produits finis', 'http://www.toposhop.admin.ch/fr/shop/terms/use/finished_products'),
-        u'it': (u'Licenza per prodotti finiti', 'http://www.toposhop.admin.ch/it/shop/terms/use/finished_products'),
-        u'en': (u'Licence for finished products', 'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'),
+        u'de': (
+            u'Lizenz für Fertigprodukte',
+            'http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'
+        ),
+        u'fr': (
+            u'Accord relatif aux produits finis',
+            'http://www.toposhop.admin.ch/fr/shop/terms/use/finished_products'
+        ),
+        u'it': (
+            u'Licenza per prodotti finiti',
+            'http://www.toposhop.admin.ch/it/shop/terms/use/finished_products'
+        ),
+        u'en': (
+            u'Licence for finished products',
+            'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'
+        ),
     }
     ORGANIZATION = {
         'de': {
             'name': u'Bundesamt für Landestopografie swisstopo',
-            'description': u'Das Kompetenzzentrum der Schweizerischen Eidgenossenschaft für Geoinformation, d.h. für die Beschreibung, Darstellung und Archivierung von raumbezogenen Geodaten.',
+            'description': (
+                u'Das Kompetenzzentrum der Schweizerischen '
+                u'Eidgenossenschaft für Geoinformation, d.h. '
+                u'für die Beschreibung, Darstellung und Archivierung '
+                u'von raumbezogenen Geodaten.'
+            ),
             'website': u'http://www.swisstopo.admin.ch/'
         },
         'fr': {
             'name': u'Office fédéral de topographie swisstopo',
-            'description': u'Le centre de compétence de la Confédération suisse pour les informations géographiques, c\'est-à-dire pour la description, la représentation et l’archivage de données à référence spatiale.'
+            'description': (
+                u'Le centre de compétence de la Confédération suisse '
+                u'pour les informations géographiques, c\'est-à-dire pour '
+                u'la description, la représentation et l’archivage de '
+                u'données à référence spatiale.'
+            )
         },
         'it': {
             'name': u'Ufficio federale di topografia swisstopo',
-            'description': u'Il centro d’eccellenza della Confederazione Elvetica per geoinformazione, cioè per la descrizione, rappresentazione e archiviazione dei dati georeferenziati (geodati).'
+            'description': (
+                u'Il centro d’eccellenza della Confederazione Elvetica '
+                u'per geoinformazione, cioè per la descrizione, '
+                u'rappresentazione e archiviazione dei dati '
+                u'georeferenziati (geodati).'
+            )
         },
         'en': {
             'name': u'Federal Office of Topography swisstopo',
-            'description': u'The centre of competence for the Swiss Confederation responsible for geographical reference data, for instance the description, representation and archiving of geographic spatial data.'
+            'description': (
+                u'The centre of competence for the Swiss Confederation '
+                u'responsible for geographical reference data, for instance '
+                u'the description, representation and archiving of ',
+                u'geographic spatial data.'
+            )
         }
     }
     GROUPS = {
@@ -84,7 +109,6 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         u'it': [u'Territorio e ambiente'],
         u'en': [u'Territory and environment']
     }
-
 
     def info(self):
         return {
@@ -99,11 +123,19 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
         ids = []
         for dataset_name, dataset in self.DATASETS.iteritems():
-            csw = ckan_csw.SwisstopoCkanMetadata();
-            metadata = csw.get_ckan_metadata(dataset['csw_query'], u'de').copy()
-            metadata_fr = csw.get_ckan_metadata(dataset['csw_query'], u'fr').copy()
-            metadata_it = csw.get_ckan_metadata(dataset['csw_query'], u'it').copy()
-            metadata_en = csw.get_ckan_metadata(dataset['csw_query'], u'en').copy()
+            csw = ckan_csw.SwisstopoCkanMetadata()
+            metadata = csw.get_ckan_metadata(
+                dataset['csw_query'], 'de'
+            ).copy()
+            metadata_fr = csw.get_ckan_metadata(
+                dataset['csw_query'], 'fr'
+            ).copy()
+            metadata_it = csw.get_ckan_metadata(
+                dataset['csw_query'], 'it'
+            ).copy()
+            metadata_en = csw.get_ckan_metadata(
+                dataset['csw_query'], 'en'
+            ).copy()
             log.debug(metadata)
 
             metadata['translations'] = self._generate_term_translations()
@@ -115,9 +147,13 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                 u'it': metadata_it,
                 u'en': metadata_en,
             }
-            metadata['translations'].extend(self._generate_metadata_translations(metadata_trans))
+            metadata['translations'].extend(
+                self._generate_metadata_translations(metadata_trans)
+            )
 
-            metadata['resources'] = self._generate_resources_dict_array(dataset_name)
+            metadata['resources'] = self._generate_resources_dict_array(
+                dataset_name
+            )
             log.debug(metadata['resources'])
 
             metadata['license_id'] = self.LICENSE['de'][0]
@@ -126,16 +162,15 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             metadata['layer_name'] = dataset_name
 
             obj = HarvestObject(
-                guid = metadata['id'],
-                job = harvest_job,
-                content = json.dumps(metadata)
+                guid=metadata['id'],
+                job=harvest_job,
+                content=json.dumps(metadata)
             )
             obj.save()
             log.debug('adding ' + dataset_name + ' to the queue')
             ids.append(obj.id)
 
         return ids
-
 
     def fetch_stage(self, harvest_object):
         log.debug('In SwisstopoHarvester fetch_stage')
@@ -165,7 +200,9 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             package_dict = json.loads(harvest_object.content)
 
             package_dict['id'] = harvest_object.guid
-            package_dict['name'] = munge_title_to_name(package_dict['layer_name'])
+            package_dict['name'] = munge_title_to_name(
+                package_dict['layer_name']
+            )
             user = model.User.get(self.HARVEST_USER)
             context = {
                 'model': model,
@@ -176,8 +213,11 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             # Find or create group the dataset should get assigned to
             package_dict['groups'] = self._find_or_create_groups(context)
 
-            # Find or create the organization the dataset should get assigned to
-            package_dict['owner_org'] = self._find_or_create_organization(context)
+            # Find or create the organization
+            # the dataset should get assigned to
+            package_dict['owner_org'] = self._find_or_create_organization(
+                context
+            )
 
             # Save license url in extras
             extras = []
@@ -186,10 +226,17 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             package_dict['extras'] = extras
 
             package = model.Package.get(package_dict['id'])
-            pkg_role = model.PackageRole(package=package, user=user, role=model.Role.ADMIN)
+            model.PackageRole(
+                package=package,
+                user=user,
+                role=model.Role.ADMIN
+            )
 
-            log.debug('Save or update package %s (%s)' % (package_dict['name'],package_dict['id']))
-            result = self._create_or_update_package(package_dict, harvest_object)
+            log.debug(
+                'Save or update package %s (%s)'
+                % (package_dict['name'], package_dict['id'])
+            )
+            self._create_or_update_package(package_dict, harvest_object)
 
             log.debug('Save or update term translations')
             self._submit_term_translations(context, package_dict)
@@ -231,10 +278,10 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     }
                 ]
             }
-            organization = get_action('organization_show')(context, data_dict)
+            org = get_action('organization_show')(context, data_dict)
         except:
-            organization = get_action('organization_create')(context, data_dict)
-        return organization['id']
+            org = get_action('organization_create')(context, data_dict)
+        return org['id']
 
     def _generate_term_translations(self):
         '''
@@ -276,7 +323,6 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
             return translations
 
-
         except Exception, e:
             log.exception(e)
             raise
@@ -289,11 +335,12 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                 if lang != u'de':
                     for key, term in metadata_translations[lang].items():
                         if term and term != metadata_translations[u'de'][key]:
-                            if key == 'tags' and len(term) == len(metadata_translations[u'de'][key]):
+                            de_term = metadata_translations[u'de'][key]
+                            if (key == 'tags' and len(term) == len(de_term)):
                                 for idx, subterm in enumerate(term):
                                     translations.append({
                                         'lang_code': lang,
-                                        'term': munge_tag(metadata_translations[u'de'][key][idx]),
+                                        'term': munge_tag(de_term[idx]),
                                         'term_translation': munge_tag(subterm)
                                     })
                             else:
@@ -322,8 +369,11 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             for key in s3_helper.list(prefix=prefix):
                 if key.size > 0:
                     resources.append({
-                        'url': key.generate_url(0, query_auth=False,
-                            force_http=True),
+                        'url': key.generate_url(
+                            0,
+                            query_auth=False,
+                            force_http=True
+                        ),
                         'name': os.path.basename(key.name),
                         'format': self._guess_format(key.name)
                     })
@@ -338,4 +388,3 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         '''
         _, file_extension = os.path.splitext(file_name.lower())
         return file_extension[1:]
-
