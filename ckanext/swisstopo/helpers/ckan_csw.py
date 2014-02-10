@@ -18,6 +18,7 @@ namespaces = {
     'ows': 'http://www.opengis.net/ows',
     'rim': 'urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0',
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'srv': 'http://www.isotc211.org/2005/srv',
     'xs': 'http://www.w3.org/2001/XMLSchema',
     'xs2': 'http://www.w3.org/XML/Schema',
     'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
@@ -171,8 +172,8 @@ class CkanMetadata(object):
             'version',
             'notes',
             'tags',
-            'metadata_url',
-            'metadata_raw',
+            'layers',
+            'layer_geocat_ids'
         ])
 
     def get_by_search(self, searchterm, propertyname='csw:AnyText'):
@@ -230,6 +231,16 @@ class CkanMetadata(object):
                 xml=dataset_xml,
                 lang=language
             )
+        # create a dict for the mapping layer -> geocat
+        self.metadata['coupled_resources'] = dict(
+            zip(
+                self.metadata['layers'],
+                self.metadata['layer_geocat_ids']
+            )
+        )
+        del self.metadata['layers']
+        del self.metadata['layer_geocat_ids']
+
         return self.metadata
 
 
@@ -362,13 +373,24 @@ class SwisstopoCkanMetadata(CkanMetadata):
             "//gmd:keyword//gmd:textGroup"
             "/gmd:LocalisedCharacterString[@locale='#DE']")]
         ),
-        'metadata_url': StringAttribute(''),
-        'metadata_raw': XmlAttribute(''),
+        'layers': ArrayAttribute([XPathMultiTextAttribute(
+            ".//gmd:identificationInfo"
+            "//srv:coupledResource//gco:ScopedName")]
+        ),
+        'layer_geocat_ids': ArrayAttribute([XPathMultiTextAttribute(
+            ".//gmd:identificationInfo"
+            "//srv:coupledResource//srv:identifier"
+            "/gco:CharacterString")]
+        )
     }
 
     known_datasets = {
         'swissboundaries3D': {
             'id': '86cb844f-296b-40cb-b972-5b1ae8028f7c',
+            'mapping': default_mapping
+        },
+        'wms.geo.admin.ch': {
+            'id': 'd5517e5e-1cc0-45d1-8839-54f9da4f5ebe',
             'mapping': default_mapping
         }
     }
