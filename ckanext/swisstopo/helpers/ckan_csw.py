@@ -222,25 +222,17 @@ class CkanMetadata(object):
         """ Returns the requested dataset mapped to CKAN attributes """
         id = self.get_id_by_dataset_name(dataset_name)
         log.debug("Dataset ID: %s" % id)
-
+        return self.get_ckan_metadata_by_id(id)
+    
+    def get_ckan_metadata_by_id(self, id, language='de'):
         dataset_xml = etree.fromstring(self.get_xml(id))
         for key in self.metadata:
             log.debug("Metadata key: %s" % key)
-            attribute = self.get_attribute(dataset_name, key)
+            attribute = self.get_attribute(key)
             self.metadata[key] = attribute.get_value(
                 xml=dataset_xml,
                 lang=language
             )
-        # create a dict for the mapping layer -> geocat
-        self.metadata['coupled_resources'] = dict(
-            zip(
-                self.metadata['layers'],
-                self.metadata['layer_geocat_ids']
-            )
-        )
-        del self.metadata['layers']
-        del self.metadata['layer_geocat_ids']
-
         return self.metadata
 
 
