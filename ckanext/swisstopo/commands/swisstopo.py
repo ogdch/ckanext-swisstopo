@@ -37,6 +37,7 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
             'import': self.importCmd,
             'list': self.listCmd,
             'csw': self.cswCmd,
+            'cswid': self.cswIdCmd,
             'help': self.helpCmd,
         }
 
@@ -54,6 +55,14 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
         s3_helper = s3.S3()
         for file in s3_helper.list():
             print file
+
+    def cswIdCmd(self, id=None, lang='de'):
+        if (id is None):
+            print "Argument 'csw id' must be set"
+            self.helpCmd()
+            sys.exit(1)
+        csw = ckan_csw.SwisstopoCkanMetadata()
+        print csw.get_ckan_metadata_by_id(id, lang)
 
     def cswCmd(self, query=None, lang='de'):
         if (query is None):
