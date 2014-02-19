@@ -1,6 +1,7 @@
 #n -*- coding: utf-8 -*-
 
 import os
+import re
 from ckan import model
 from ckan.model import Session
 from ckan.logic import get_action, action
@@ -12,6 +13,7 @@ from ckanext.harvest.model import HarvestObject
 from base import OGDCHHarvesterBase
 
 from ckanext.swisstopo.helpers import ckan_csw
+from ckanext.swisstopo.helpers import ckan_wms
 from ckanext.swisstopo.helpers import s3
 
 import logging
@@ -45,6 +47,46 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             'csw_query': 'Amtliches Ortschaftenverzeichnis',
         }
     }
+
+    # all WMS layer that match the following list
+    # will be added as a dataset
+    # NOTE: you must use regex
+    API_WHITELIST = [
+        'ch\.swisstopo\.images-swissimage\.metadata',
+        'ch\.swisstopo\.pixelkarte-grau-pk1000\.noscale',
+        'ch\.swisstopo\.pixelkarte-pk500\.metadata',
+        'ch\.swisstopo\.pixelkarte-pk200\.metadata',
+        'ch\.swisstopo\.pixelkarte-pk100\.metadata',
+        'ch\.swisstopo\.pixelkarte-pk50\.metadata',
+        'ch\.swisstopo\.pixelkarte-pk25\.metadata',
+        'ch\.swisstopo\.uebersicht-gemeinden',
+        'ch\.swisstopo\.uebersicht-schweiz',
+        'ch\.swisstopo-vd\.geometa',
+        'ch\.swisstopo-vd\.geometa-gemeinde',
+        'ch\.swisstopo-vd\.geometa-grundbuch',
+        'ch\.swisstopo-vd\.geometa-los',
+        'ch\.swisstopo-vd\.geometa-nfgeom',
+        'ch\.swisstopo-vd\.geometa-standav',
+        'ch\.swisstopo-vd\.spannungsarme-gebiete',
+        'ch\.swisstopo\.geologie-hydrogeologische_karte-grundwasservulnerabilitaet',  # noqa
+        'ch\.swisstopo\.geologie-tektonische_karte',
+        'ch\.swisstopo\.geologie-geologische_karte',
+        'ch\.swisstopo\.geologie-geodaesie-isostatische_anomalien',
+        'ch\.swisstopo\.geologie-geodaesie-bouguer_anomalien',
+        'ch\.swisstopo\.geologie-eiszeit-lgm-raster',
+        'ch\.swisstopo\.geologie-geophysik-deklination',
+        'ch\.swisstopo\.geologie-geophysik-geothermie',
+        'ch\.swisstopo\.geologie-geophysik-inklination',
+        'ch\.swisstopo\.geologie-geophysik-totalintensitaet',
+        'ch\.swisstopo\.geologie-hydrogeologische_karte-grundwasservorkommen',
+        'ch\.swisstopo\.geologie-geophysik-aeromagnetische_karte_schweiz',
+        'ch\.swisstopo\.geologie-geotechnik-gk200',
+        'ch\.swisstopo\.geologie-geotechnik-gk500-lithologie_hauptgruppen',
+        'ch\.swisstopo\.geologie-geotechnik-gk500-gesteinsklassierung',
+        'ch\.swisstopo\.geologie-geotechnik-gk500-genese',
+        'ch\.swisstopo\.geologie-geotechnik-mineralische_rohstoffe200',
+        '^ch\.bafu\..*'
+    ]
 
     LICENSE = {
         u'de': (
@@ -121,6 +163,12 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
     def gather_stage(self, harvest_job):
         log.debug('In SwisstopoHarvester gather_stage')
 
+        file_ids = self._gen_harvest_obj_for_files(harvest_job)
+        api_ids = self._gen_harvest_obj_for_apis(harvest_job)
+
+        return file_ids + api_ids
+
+    def _gen_harvest_obj_for_files(self, harvest_job):
         ids = []
         for dataset_name, dataset in self.DATASETS.iteritems():
             csw = ckan_csw.SwisstopoCkanMetadata()
@@ -154,6 +202,9 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             metadata['resources'] = self._generate_resources_dict_array(
                 dataset_name
             )
+            metadata['resources'].extend(
+                self._generate_api_resources(metadata, dataset_name)
+            )
             log.debug(metadata['resources'])
 
             metadata['license_id'] = self.LICENSE['de'][0]
@@ -168,6 +219,45 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             )
             obj.save()
             log.debug('adding ' + dataset_name + ' to the queue')
+            ids.append(obj.id)
+
+        return ids
+
+    def _gen_harvest_obj_for_apis(self, harvest_job):
+        wms = ckan_wms.SwisstopoWmsLayerParser()
+        ids = []
+        whitelist_regex = "(" + ")|(".join(self.API_WHITELIST) + ")"
+        for layer, metadata_dict in wms.parse('https://wms.geo.admin.ch'):
+            if not re.match(whitelist_regex, layer):
+                log.info("Layer '%s' is NOT on whitelist, skipping" % layer)
+                continue
+            log.info("Layer '%s' is on whitelist, continue" % layer)
+
+            metadata = metadata_dict['de'].copy()
+            log.debug(metadata)
+
+            metadata['translations'] = self._generate_term_translations()
+            log.debug("Translations: %s" % metadata['translations'])
+
+            metadata['translations'].extend(
+                self._generate_metadata_translations(metadata_dict)
+            )
+
+            metadata['license_id'] = self.LICENSE['de'][0]
+            metadata['license_url'] = self.LICENSE['de'][1]
+
+            metadata['layer_name'] = layer
+
+            metadata['resources'] = self._generate_api_resources(metadata, layer)
+            log.debug(metadata['resources'])
+
+            obj = HarvestObject(
+                guid=metadata['id'],
+                job=harvest_job,
+                content=json.dumps(metadata)
+            )
+            obj.save()
+            log.debug('adding ' + layer + ' to the queue')
             ids.append(obj.id)
 
         return ids
@@ -381,6 +471,30 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         except Exception, e:
             log.exception(e)
             raise
+
+    def _generate_api_resources(self, metadata, layer=None):
+        service_type = metadata['service_type']
+        url = metadata['service_url']
+        title = metadata['title']
+
+        if service_type:
+            service_type = service_type.replace('OGC:', '')
+        else:
+            service_type = "WMS"
+
+        if not url:
+            url = "http://wms.geo.admin.ch/"
+
+        if layer:
+            title = layer
+
+        return [{
+            'url': url,
+            'name': "%s (%s)" % (service_type, title),
+            'format': service_type,
+            'resource_type': 'api',
+            'wms_layer': layer
+        }]
 
     def _guess_format(self, file_name):
         '''

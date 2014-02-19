@@ -62,8 +62,8 @@ class XPathAttribute(Attribute):
         try:
             # this should probably return a XPathTextAttribute
             value = self.get_element(xml, xpath)
-        except Exception as e:
-            log.exception(e)
+        except Exception:
+            log.debug('XPath not found: %s' % xpath)
             value = ''
         return value
 
@@ -172,6 +172,8 @@ class CkanMetadata(object):
             'version',
             'notes',
             'tags',
+            'service_url',
+            'service_type',
             'layers',
             'layer_geocat_ids'
         ])
@@ -222,8 +224,8 @@ class CkanMetadata(object):
         """ Returns the requested dataset mapped to CKAN attributes """
         id = self.get_id_by_dataset_name(dataset_name)
         log.debug("Dataset ID: %s" % id)
-        return self.get_ckan_metadata_by_id(id)
-    
+        return self.get_ckan_metadata_by_id(id, language)
+
     def get_ckan_metadata_by_id(self, id, language='de'):
         dataset_xml = etree.fromstring(self.get_xml(id))
         for key in self.metadata:
@@ -364,6 +366,13 @@ class SwisstopoCkanMetadata(CkanMetadata):
             ".//gmd:identificationInfo//gmd:descriptiveKeywords"
             "//gmd:keyword//gmd:textGroup"
             "/gmd:LocalisedCharacterString[@locale='#DE']")]
+        ),
+        'service_url': XPathTextAttribute(
+            ".//gmd:identificationInfo//srv:connectPoint//gmd:linkage"
+            "//che:LocalisedURL[@locale='#DE']"
+        ),
+        'service_type': XPathTextAttribute(
+            ".//gmd:identificationInfo//srv:serviceType//gco:LocalName"
         ),
         'layers': ArrayAttribute([XPathMultiTextAttribute(
             ".//gmd:identificationInfo"
