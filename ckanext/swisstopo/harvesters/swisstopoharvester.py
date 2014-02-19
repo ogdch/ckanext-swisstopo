@@ -248,7 +248,10 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
             metadata['layer_name'] = layer
 
-            metadata['resources'] = self._generate_api_resources(metadata, layer)
+            metadata['resources'] = self._generate_api_resources(
+                metadata,
+                layer
+            )
             log.debug(metadata['resources'])
 
             obj = HarvestObject(
@@ -427,12 +430,13 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                         if term and term != metadata_translations[u'de'][key]:
                             de_term = metadata_translations[u'de'][key]
                             if (key == 'tags' and len(term) == len(de_term)):
-                                for idx, subterm in enumerate(term):
-                                    translations.append({
-                                        'lang_code': lang,
-                                        'term': munge_tag(de_term[idx]),
-                                        'term_translation': munge_tag(subterm)
-                                    })
+                                translations.extend(
+                                    self._generate_tag_translations(
+                                        lang,
+                                        term,
+                                        de_term
+                                    )
+                                )
                             else:
                                 translations.append({
                                     'lang_code': lang,
@@ -444,6 +448,17 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         except Exception, e:
             log.exception(e)
             raise
+
+    def _generate_tag_translations(self, lang, tags, orig_tags):
+        tag_trans = []
+        for idx, tag in enumerate(tags):
+            if tag:
+                tag_trans.append({
+                    'lang_code': lang,
+                    'term': munge_tag(orig_tags[idx]),
+                    'term_translation': munge_tag(tag)
+                })
+        return tag_trans
 
     def _submit_term_translations(self, context, package_dict):
         for translation in package_dict['translations']:
