@@ -107,42 +107,87 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         ),
     }
     ORGANIZATION = {
-        'de': {
-            'name': u'Bundesamt für Landestopografie swisstopo',
-            'description': (
-                u'Das Kompetenzzentrum der Schweizerischen '
-                u'Eidgenossenschaft für Geoinformation, d.h. '
-                u'für die Beschreibung, Darstellung und Archivierung '
-                u'von raumbezogenen Geodaten.'
-            ),
-            'website': u'http://www.swisstopo.admin.ch/'
+        'swisstopo': {
+            'de': {
+                'name': u'Bundesamt für Landestopografie swisstopo',
+                'description': (
+                    u'Das Kompetenzzentrum der Schweizerischen '
+                    u'Eidgenossenschaft für Geoinformation, d.h. '
+                    u'für die Beschreibung, Darstellung und Archivierung '
+                    u'von raumbezogenen Geodaten.'
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
+            },
+            'fr': {
+                'name': u'Office fédéral de topographie swisstopo',
+                'description': (
+                    u'Le centre de compétence de la Confédération suisse '
+                    u'pour les informations géographiques, c\'est-à-dire pour '
+                    u'la description, la représentation et l’archivage de '
+                    u'données à référence spatiale.'
+                )
+            },
+            'it': {
+                'name': u'Ufficio federale di topografia swisstopo',
+                'description': (
+                    u'Il centro d’eccellenza della Confederazione Elvetica '
+                    u'per geoinformazione, cioè per la descrizione, '
+                    u'rappresentazione e archiviazione dei dati '
+                    u'georeferenziati (geodati).'
+                )
+            },
+            'en': {
+                'name': u'Federal Office of Topography swisstopo',
+                'description': (
+                    u'The centre of competence for the Swiss Confederation '
+                    u'responsible for geographical reference data, for '
+                    u'instance the description, representation and archiving '
+                    u'of geographic spatial data.'
+                )
+            }
         },
-        'fr': {
-            'name': u'Office fédéral de topographie swisstopo',
-            'description': (
-                u'Le centre de compétence de la Confédération suisse '
-                u'pour les informations géographiques, c\'est-à-dire pour '
-                u'la description, la représentation et l’archivage de '
-                u'données à référence spatiale.'
-            )
-        },
-        'it': {
-            'name': u'Ufficio federale di topografia swisstopo',
-            'description': (
-                u'Il centro d’eccellenza della Confederazione Elvetica '
-                u'per geoinformazione, cioè per la descrizione, '
-                u'rappresentazione e archiviazione dei dati '
-                u'georeferenziati (geodati).'
-            )
-        },
-        'en': {
-            'name': u'Federal Office of Topography swisstopo',
-            'description': (
-                u'The centre of competence for the Swiss Confederation '
-                u'responsible for geographical reference data, for instance '
-                u'the description, representation and archiving of ',
-                u'geographic spatial data.'
-            )
+        'bafu': {
+            'de': {
+                'name': u'Bundesamt für Umwelt',
+                'description': (
+                    u'Die Fachbehörde für die Umwelt. Es ist zuständig für '
+                    u'die nachhaltige Nutzung der natürlichen Ressourcen '
+                    u'sowie für den Schutz des Menschen vor Naturgefahren '
+                    u'und den Schutz der Umwelt vor übermässigen Belastungen.'
+                ),
+                'website': u'www.bafu.admin.ch/zustand'
+            },
+            'fr': {
+                'name': u'Office fédéral de l\'environnement',
+                'description': (
+                    u'L’autorité compétente pour les questions '
+                    u'environnementales. Il est à ce titre chargé de '
+                    u'gérer les ressources naturelles selon les principes '
+                    u'du développement durable et de protéger l’homme '
+                    u'contre les dangers naturels et l’environnement '
+                    u'contre les pollutions.'
+                )
+            },
+            'it': {
+                'name': u'Ufficio federale dell\'ambiente',
+                'description': (
+                    u'Il servizio specializzato in materia ambientale, è '
+                    u'competente per quanto riguarda l\'utilizzazione '
+                    u'sostenibile delle risorse naturali, la protezione delle '
+                    u'persone dai pericoli naturali e dell\'ambiente da un '
+                    u'inquinamento eccessivo.'
+                )
+            },
+            'en': {
+                'name': u'Federal Office for the Environment',
+                'description': (
+                    u'The federal environmental authority. It is responsible '
+                    u'for ensuring that natural resources are used '
+                    u'sustainably, that the public is protected against '
+                    u'natural hazards, and that the environment is protected '
+                    u'from unacceptable adverse impacts.'
+                )
+            }
         }
     }
     GROUPS = {
@@ -309,7 +354,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             # Find or create the organization
             # the dataset should get assigned to
             package_dict['owner_org'] = self._find_or_create_organization(
-                context
+                context,
+                package_dict
             )
 
             # Save license url in extras
@@ -356,18 +402,23 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         group_ids.append(group['id'])
         return group_ids
 
-    def _find_or_create_organization(self, context):
+    def _find_or_create_organization(self, context, package_dict):
+        if re.match('^ch\.bafu', package_dict['layer_name']):
+            org = 'bafu'
+        else:
+            org = 'swisstopo'
         try:
+            name = self.ORGANIZATION[org]['de']['name']
             data_dict = {
                 'permission': 'edit_group',
-                'id': munge_title_to_name(self.ORGANIZATION['de']['name']),
-                'name': munge_title_to_name(self.ORGANIZATION['de']['name']),
-                'title': self.ORGANIZATION['de']['name'],
-                'description': self.ORGANIZATION['de']['description'],
+                'id': munge_title_to_name(name),
+                'name': munge_title_to_name(name),
+                'title': self.ORGANIZATION[org]['de']['name'],
+                'description': self.ORGANIZATION[org]['de']['description'],
                 'extras': [
                     {
                         'key': 'website',
-                        'value': self.ORGANIZATION['de']['website']
+                        'value': self.ORGANIZATION[org]['de']['website']
                     }
                 ]
             }
@@ -396,14 +447,16 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                         'term_translation': lic[1]
                         })
 
-            for lang, org in self.ORGANIZATION.items():
-                if lang != 'de':
-                    for field in ['name', 'description']:
-                        translations.append({
-                            'lang_code': lang,
-                            'term': self.ORGANIZATION['de'][field],
-                            'term_translation': org[field]
-                        })
+            for org_name, org in self.ORGANIZATION.items():
+                for lang, org_item in org.items():
+                    if lang != 'de':
+                        for field in ['name', 'description']:
+                            value = self.ORGANIZATION[org_name]['de'][field]
+                            translations.append({
+                                'lang_code': lang,
+                                'term': value,
+                                'term_translation': org_item[field]
+                            })
 
             for lang, groups in self.GROUPS.iteritems():
                 if lang != u'de':
