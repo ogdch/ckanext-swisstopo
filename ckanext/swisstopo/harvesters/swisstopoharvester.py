@@ -48,19 +48,19 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
 
     LICENSE = {
         u'de': (
-            u'Lizenz für Fertigprodukte',
+            u'Lizenz für kostenlose Geodaten',
             'http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'
         ),
         u'fr': (
-            u'Accord relatif aux produits finis',
+            u'Licence pour les géodonnées gratuites',
             'http://www.toposhop.admin.ch/fr/shop/terms/use/finished_products'
         ),
         u'it': (
-            u'Licenza per prodotti finiti',
+            u'Licenza per i geodati gratuiti',
             'http://www.toposhop.admin.ch/it/shop/terms/use/finished_products'
         ),
         u'en': (
-            u'Licence for finished products',
+            u'Licence for free geodata',
             'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'
         ),
     }
