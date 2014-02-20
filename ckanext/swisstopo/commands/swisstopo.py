@@ -1,4 +1,3 @@
-import logging
 import ckan.lib.cli
 import sys
 
@@ -11,17 +10,21 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
 
     Usage:
 
+        # General usage
+        paster --plugin=ckanext-swisstopo <command> -c <path to config file>
+
         # Show this help
-        paster --plugin=ckanext-swisstopo swisstopo help -c <path to config file>
+        paster swisstopo help
 
         # Import datasets
-        paster --plugin=ckanext-swisstopo swisstopo import -c <path to config file>
+        paster swisstopo import
 
         # List all files in the S3 bucket
-        paster --plugin=ckanext-swisstopo swisstopo list -c <path to config file>
+        paster swisstopo list
 
-        # Show output from CSW, 'query' is typically the name of a dataset like 'swissboundaries3D'
-        paster --plugin=ckanext-swisstopo swisstopo csw <query> -c <path to config file>
+        # Show output from CSW
+        # 'query' typically the name of a dataset like 'swissboundaries3D'
+        paster swisstopo csw <query>
 
     '''
     summary = __doc__.split('\n')[0]
@@ -31,10 +34,11 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
         # load pylons config
         self._load_config()
         options = {
-                'import': self.importCmd,
-                'list': self.listCmd,
-                'csw': self.cswCmd,
-                'help': self.helpCmd,
+            'import': self.importCmd,
+            'list': self.listCmd,
+            'csw': self.cswCmd,
+            'cswid': self.cswIdCmd,
+            'help': self.helpCmd,
         }
 
         try:
@@ -48,18 +52,25 @@ class SwisstopoCommand(ckan.lib.cli.CkanCommand):
         print self.__doc__
 
     def listCmd(self):
-        s3_helper = s3.S3();
+        s3_helper = s3.S3()
         for file in s3_helper.list():
             print file
+
+    def cswIdCmd(self, id=None, lang='de'):
+        if (id is None):
+            print "Argument 'csw id' must be set"
+            self.helpCmd()
+            sys.exit(1)
+        csw = ckan_csw.SwisstopoCkanMetadata()
+        print csw.get_ckan_metadata_by_id(id, lang)
 
     def cswCmd(self, query=None, lang='de'):
         if (query is None):
             print "Argument 'query' must be set"
             self.helpCmd()
             sys.exit(1)
-        csw = ckan_csw.SwisstopoCkanMetadata();
+        csw = ckan_csw.SwisstopoCkanMetadata()
         print csw.get_ckan_metadata(query, lang)
-
 
     def importCmd(self):
         raise NotImplementedError
