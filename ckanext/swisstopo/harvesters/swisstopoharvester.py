@@ -125,7 +125,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'pour les informations géographiques, c\'est-à-dire pour '
                     u'la description, la représentation et l’archivage de '
                     u'données à référence spatiale.'
-                )
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
             },
             'it': {
                 'name': u'Ufficio federale di topografia swisstopo',
@@ -134,7 +135,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'per geoinformazione, cioè per la descrizione, '
                     u'rappresentazione e archiviazione dei dati '
                     u'georeferenziati (geodati).'
-                )
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
             },
             'en': {
                 'name': u'Federal Office of Topography swisstopo',
@@ -143,7 +145,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'responsible for geographical reference data, for '
                     u'instance the description, representation and archiving '
                     u'of geographic spatial data.'
-                )
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
             }
         },
         'bafu': {
@@ -166,7 +169,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'du développement durable et de protéger l’homme '
                     u'contre les dangers naturels et l’environnement '
                     u'contre les pollutions.'
-                )
+                ),
+                'website': u'www.bafu.admin.ch/etat'
             },
             'it': {
                 'name': u'Ufficio federale dell\'ambiente',
@@ -176,7 +180,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'sostenibile delle risorse naturali, la protezione delle '
                     u'persone dai pericoli naturali e dell\'ambiente da un '
                     u'inquinamento eccessivo.'
-                )
+                ),
+                'website': u'www.bafu.admin.ch/stato'
             },
             'en': {
                 'name': u'Federal Office for the Environment',
@@ -186,7 +191,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'sustainably, that the public is protected against '
                     u'natural hazards, and that the environment is protected '
                     u'from unacceptable adverse impacts.'
-                )
+                ),
+                'website': u'www.bafu.admin.ch/state'
             }
         }
     }
@@ -450,13 +456,14 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             for org_name, org in self.ORGANIZATION.items():
                 for lang, org_item in org.items():
                     if lang != 'de':
-                        for field in ['name', 'description']:
+                        for field in ['name', 'description', 'website']:
                             value = self.ORGANIZATION[org_name]['de'][field]
-                            translations.append({
-                                'lang_code': lang,
-                                'term': value,
-                                'term_translation': org_item[field]
-                            })
+                            if value != org_item[field]:
+                                translations.append({
+                                    'lang_code': lang,
+                                    'term': value,
+                                    'term_translation': org_item[field]
+                                })
 
             for lang, groups in self.GROUPS.iteritems():
                 if lang != u'de':
