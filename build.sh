@@ -12,4 +12,4 @@ trap "cleanup" EXIT
 flake8 --show-pep8 --show-source ckanext
 
 # run tests
-# nosetests --verbose
+nosetests --verbose

@@ -18,6 +18,7 @@ namespaces = {
     'ows': 'http://www.opengis.net/ows',
     'rim': 'urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0',
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'srv': 'http://www.isotc211.org/2005/srv',
     'xs': 'http://www.w3.org/2001/XMLSchema',
     'xs2': 'http://www.w3.org/XML/Schema',
     'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
@@ -61,8 +62,8 @@ class XPathAttribute(Attribute):
         try:
             # this should probably return a XPathTextAttribute
             value = self.get_element(xml, xpath)
-        except Exception as e:
-            log.exception(e)
+        except Exception:
+            log.debug('XPath not found: %s' % xpath)
             value = ''
         return value
 
@@ -171,8 +172,10 @@ class CkanMetadata(object):
             'version',
             'notes',
             'tags',
-            'metadata_url',
-            'metadata_raw',
+            'service_url',
+            'service_type',
+            'layers',
+            'layer_geocat_ids'
         ])
 
     def get_by_search(self, searchterm, propertyname='csw:AnyText'):
@@ -204,7 +207,7 @@ class CkanMetadata(object):
         first_dataset = dataset_list.itervalues().next()
         return first_dataset.identifier
 
-    def get_attribute(self, dataset_name, ckan_attribute):
+    def get_attribute(self, ckan_attribute):
         """
             Abstract method to define the mapping of
             a ckan attribute to a csw attribute
@@ -221,11 +224,13 @@ class CkanMetadata(object):
         """ Returns the requested dataset mapped to CKAN attributes """
         id = self.get_id_by_dataset_name(dataset_name)
         log.debug("Dataset ID: %s" % id)
+        return self.get_ckan_metadata_by_id(id, language)
 
+    def get_ckan_metadata_by_id(self, id, language='de'):
         dataset_xml = etree.fromstring(self.get_xml(id))
         for key in self.metadata:
             log.debug("Metadata key: %s" % key)
-            attribute = self.get_attribute(dataset_name, key)
+            attribute = self.get_attribute(key)
             self.metadata[key] = attribute.get_value(
                 xml=dataset_xml,
                 lang=language
@@ -236,7 +241,7 @@ class CkanMetadata(object):
 class SwisstopoCkanMetadata(CkanMetadata):
     """ Provides access to the csw service of swisstopo """
 
-    default_mapping = {
+    mapping = {
         'id': XPathTextAttribute('.//gmd:fileIdentifier/gco:CharacterString'),
         'name': XPathTextAttribute(
             ".//gmd:identificationInfo//gmd:citation//gmd:title"
@@ -362,14 +367,30 @@ class SwisstopoCkanMetadata(CkanMetadata):
             "//gmd:keyword//gmd:textGroup"
             "/gmd:LocalisedCharacterString[@locale='#DE']")]
         ),
-        'metadata_url': StringAttribute(''),
-        'metadata_raw': XmlAttribute(''),
+        'service_url': XPathTextAttribute(
+            ".//gmd:identificationInfo//srv:connectPoint//gmd:linkage"
+            "//che:LocalisedURL[@locale='#DE']"
+        ),
+        'service_type': XPathTextAttribute(
+            ".//gmd:identificationInfo//srv:serviceType//gco:LocalName"
+        ),
+        'layers': ArrayAttribute([XPathMultiTextAttribute(
+            ".//gmd:identificationInfo"
+            "//srv:coupledResource//gco:ScopedName")]
+        ),
+        'layer_geocat_ids': ArrayAttribute([XPathMultiTextAttribute(
+            ".//gmd:identificationInfo"
+            "//srv:coupledResource//srv:identifier"
+            "/gco:CharacterString")]
+        )
     }
 
     known_datasets = {
         'swissboundaries3D': {
             'id': '86cb844f-296b-40cb-b972-5b1ae8028f7c',
-            'mapping': default_mapping
+        },
+        'wms.geo.admin.ch': {
+            'id': 'd5517e5e-1cc0-45d1-8839-54f9da4f5ebe',
         }
     }
 
@@ -389,16 +410,9 @@ class SwisstopoCkanMetadata(CkanMetadata):
             .get_id_by_dataset_name(dataset_name)
         )
 
-    def get_mapping(self, dataset_name):
-        if (dataset_name in self.known_datasets and
-                'mapping' in self.known_datasets[dataset_name]):
-            return self.known_datasets[dataset_name]['mapping']
-        return self.default_mapping
-
-    def get_attribute(self, dataset_name, ckan_attribute):
-        mapping = self.get_mapping(dataset_name)
-        if ckan_attribute in mapping:
-            return mapping[ckan_attribute]
+    def get_attribute(self, ckan_attribute):
+        if ckan_attribute in self.mapping:
+            return self.mapping[ckan_attribute]
         raise AttributeMappingNotFoundError(
             "No mapping found for attribute '%s'" % ckan_attribute
         )

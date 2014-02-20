@@ -14,7 +14,7 @@ class CkanMetadataTest(unittest.TestCase):
         self.assertEqual(ckan.schema, 'http://www.geocat.ch/2008/che')
 
     def test_namespaces_available(self):
-        self.assertEquals(17, len(ckan_csw.namespaces))
+        self.assertEquals(18, len(ckan_csw.namespaces))
         for index, item in ckan_csw.namespaces.iteritems():
             self.assertIsInstance(index, str)
             self.assertIsInstance(item, str)
@@ -28,7 +28,7 @@ class SwisstopoCkanMetadataTest(unittest.TestCase):
         self.swisstopo.get_xml = Mock(return_value=self.test_xml)
 
     def test_get_attribute_license(self):
-        license = self.swisstopo.get_attribute('swissboundaries3D', 'license')
+        license = self.swisstopo.get_attribute('license_url')
         self.assertIsInstance(license, ckan_csw.StringAttribute)
         self.assertEquals(
             license.get_value(),
@@ -36,8 +36,7 @@ class SwisstopoCkanMetadataTest(unittest.TestCase):
         )
 
     def test_get_attribute_maintainer(self):
-        maintainer = self.swisstopo.get_attribute('swissboundaries3D',
-                                                  'maintainer')
+        maintainer = self.swisstopo.get_attribute('maintainer')
         self.assertIsInstance(maintainer, ckan_csw.CombinedAttribute)
         for attr in maintainer._config:
             self.assertIsInstance(attr, ckan_csw.XPathTextAttribute)
