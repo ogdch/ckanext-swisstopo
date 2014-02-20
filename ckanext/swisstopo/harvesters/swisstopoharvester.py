@@ -89,23 +89,44 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
     ]
 
     LICENSE = {
-        u'de': (
-            u'Lizenz für kostenlose Geodaten',
-            'http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'
-        ),
-        u'fr': (
-            u'Licence pour les géodonnées gratuites',
-            'http://www.toposhop.admin.ch/fr/shop/terms/use/finished_products'
-        ),
-        u'it': (
-            u'Licenza per i geodati gratuiti',
-            'http://www.toposhop.admin.ch/it/shop/terms/use/finished_products'
-        ),
-        u'en': (
-            u'Licence for free geodata',
-            'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'
-        ),
+        'swisstopo': {
+            u'de': (
+                u'Lizenz für kostenlose Geodaten',
+                'http://www.toposhop.admin.ch/de/shop/terms/use/finished_products'  # noqa
+            ),
+            u'fr': (
+                u'Licence pour les géodonnées gratuites',
+                'http://www.toposhop.admin.ch/fr/shop/terms/use/finished_products'  # noqa
+            ),
+            u'it': (
+                u'Licenza per i geodati gratuiti',
+                'http://www.toposhop.admin.ch/it/shop/terms/use/finished_products'  # noqa
+            ),
+            u'en': (
+                u'Licence for free geodata',
+                'http://www.toposhop.admin.ch/en/shop/terms/use/finished_products'  # noqa
+            ),
+        },
+        'bafu': {
+            u'de': (
+                u'Lizenz- und Nutzungsbedingungen BAFU',
+                'http://www.geo.admin.ch/internet/geoportal/de/home/geoadmin/contact.parsys.39177.DownloadFile.tmp/lizenznutzungsbedingungend070920.pdf'  # noqa
+            ),
+            u'fr': (
+                u'Conditions d\'utilisation et d\'octroi de licence OFEV',
+                'http://www.geo.admin.ch/internet/geoportal/fr/home/geoadmin/contact.parsys.99124.DownloadFile.tmp/lizenznutzungsbedingungenf070920.pdf'  # noqa
+            ),
+            u'it': (
+                u'Condizioni di licenza e di utilizzo UFAM',
+                'http://www.geo.admin.ch/internet/geoportal/it/home/geoadmin/contact.parsys.32848.DownloadFile.tmp/lizenzbedingungen070920it.pdf'  # noqa
+            ),
+            u'en': (
+                u'Lizenz- und Nutzungsbedingungen BAFU (german)',
+                'http://www.geo.admin.ch/internet/geoportal/de/home/geoadmin/contact.parsys.39177.DownloadFile.tmp/lizenznutzungsbedingungend070920.pdf'  # noqa
+            ),
+        }
     }
+
     ORGANIZATION = {
         'swisstopo': {
             'de': {
@@ -125,7 +146,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'pour les informations géographiques, c\'est-à-dire pour '
                     u'la description, la représentation et l’archivage de '
                     u'données à référence spatiale.'
-                )
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
             },
             'it': {
                 'name': u'Ufficio federale di topografia swisstopo',
@@ -134,7 +156,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'per geoinformazione, cioè per la descrizione, '
                     u'rappresentazione e archiviazione dei dati '
                     u'georeferenziati (geodati).'
-                )
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
             },
             'en': {
                 'name': u'Federal Office of Topography swisstopo',
@@ -143,7 +166,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'responsible for geographical reference data, for '
                     u'instance the description, representation and archiving '
                     u'of geographic spatial data.'
-                )
+                ),
+                'website': u'http://www.swisstopo.admin.ch/'
             }
         },
         'bafu': {
@@ -166,7 +190,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'du développement durable et de protéger l’homme '
                     u'contre les dangers naturels et l’environnement '
                     u'contre les pollutions.'
-                )
+                ),
+                'website': u'www.bafu.admin.ch/etat'
             },
             'it': {
                 'name': u'Ufficio federale dell\'ambiente',
@@ -176,7 +201,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'sostenibile delle risorse naturali, la protezione delle '
                     u'persone dai pericoli naturali e dell\'ambiente da un '
                     u'inquinamento eccessivo.'
-                )
+                ),
+                'website': u'www.bafu.admin.ch/stato'
             },
             'en': {
                 'name': u'Federal Office for the Environment',
@@ -186,7 +212,8 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'sustainably, that the public is protected against '
                     u'natural hazards, and that the environment is protected '
                     u'from unacceptable adverse impacts.'
-                )
+                ),
+                'website': u'www.bafu.admin.ch/state'
             }
         }
     }
@@ -252,8 +279,9 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             )
             log.debug(metadata['resources'])
 
-            metadata['license_id'] = self.LICENSE['de'][0]
-            metadata['license_url'] = self.LICENSE['de'][1]
+            metadata['license_id'], metadata['license_url'] = (
+                self._get_org_license(dataset_name)
+            )
 
             metadata['layer_name'] = dataset_name
 
@@ -288,8 +316,9 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                 self._generate_metadata_translations(metadata_dict)
             )
 
-            metadata['license_id'] = self.LICENSE['de'][0]
-            metadata['license_url'] = self.LICENSE['de'][1]
+            metadata['license_id'], metadata['license_url'] = (
+                self._get_org_license(layer)
+            )
 
             metadata['layer_name'] = layer
 
@@ -402,11 +431,12 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         group_ids.append(group['id'])
         return group_ids
 
+    def _get_org_license(self, dataset_name):
+        org = self._find_owner(dataset_name)
+        return self.LICENSE[org]['de'][0], self.LICENSE[org]['de'][1]
+
     def _find_or_create_organization(self, context, package_dict):
-        if re.match('^ch\.bafu', package_dict['layer_name']):
-            org = 'bafu'
-        else:
-            org = 'swisstopo'
+        org = self._find_owner(package_dict['layer_name'])
         try:
             name = self.ORGANIZATION[org]['de']['name']
             data_dict = {
@@ -427,6 +457,13 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
             org = get_action('organization_create')(context, data_dict)
         return org['id']
 
+    def _find_owner(self, dataset_name):
+        if re.match('^ch\.bafu', dataset_name):
+            org = 'bafu'
+        else:
+            org = 'swisstopo'
+        return org
+
     def _generate_term_translations(self):
         '''
         Generate term translatations for groups, organizations and metadata
@@ -434,29 +471,36 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
         try:
             translations = []
 
-            for lang, lic in self.LICENSE.items():
-                if lang != u'de':
-                    translations.append({
-                        'lang_code': lang,
-                        'term': self.LICENSE[u'de'][0],
-                        'term_translation': lic[0]
-                        })
-                    translations.append({
-                        'lang_code': lang,
-                        'term': self.LICENSE[u'de'][1],
-                        'term_translation': lic[1]
-                        })
+            for org_name, lic in self.LICENSE.items():
+                for lang, lic_item in lic.items():
+                    if lang != u'de':
+                        id_value = self.LICENSE[org_name][u'de'][0]
+                        url_value = self.LICENSE[org_name][u'de'][1]
+
+                        if id_value != lic_item[0]:
+                            translations.append({
+                                'lang_code': lang,
+                                'term': id_value,
+                                'term_translation': lic_item[0]
+                            })
+                        if url_value != lic_item[1]:
+                            translations.append({
+                                'lang_code': lang,
+                                'term': url_value,
+                                'term_translation': lic_item[1]
+                            })
 
             for org_name, org in self.ORGANIZATION.items():
                 for lang, org_item in org.items():
                     if lang != 'de':
-                        for field in ['name', 'description']:
+                        for field in ['name', 'description', 'website']:
                             value = self.ORGANIZATION[org_name]['de'][field]
-                            translations.append({
-                                'lang_code': lang,
-                                'term': value,
-                                'term_translation': org_item[field]
-                            })
+                            if value != org_item[field]:
+                                translations.append({
+                                    'lang_code': lang,
+                                    'term': value,
+                                    'term_translation': org_item[field]
+                                })
 
             for lang, groups in self.GROUPS.iteritems():
                 if lang != u'de':
