@@ -179,7 +179,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'sowie für den Schutz des Menschen vor Naturgefahren '
                     u'und den Schutz der Umwelt vor übermässigen Belastungen.'
                 ),
-                'website': u'www.bafu.admin.ch/zustand'
+                'website': u'http://www.bafu.admin.ch/zustand'
             },
             'fr': {
                 'name': u'Office fédéral de l\'environnement',
@@ -191,7 +191,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'contre les dangers naturels et l’environnement '
                     u'contre les pollutions.'
                 ),
-                'website': u'www.bafu.admin.ch/etat'
+                'website': u'http://www.bafu.admin.ch/etat'
             },
             'it': {
                 'name': u'Ufficio federale dell\'ambiente',
@@ -202,7 +202,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'persone dai pericoli naturali e dell\'ambiente da un '
                     u'inquinamento eccessivo.'
                 ),
-                'website': u'www.bafu.admin.ch/stato'
+                'website': u'http://www.bafu.admin.ch/stato'
             },
             'en': {
                 'name': u'Federal Office for the Environment',
@@ -213,7 +213,7 @@ class SwisstopoHarvester(OGDCHHarvesterBase):
                     u'natural hazards, and that the environment is protected '
                     u'from unacceptable adverse impacts.'
                 ),
-                'website': u'www.bafu.admin.ch/state'
+                'website': u'http://www.bafu.admin.ch/state'
             }
         }
     }
